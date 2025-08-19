@@ -11,8 +11,8 @@
 (function () {
     'use strict';
 
-    // Configuration object with field mappings
-    const formData = {
+    // Default configuration object with field mappings
+    let defaultFormData = {
         'Roll No': '22054029',
         'Full Name': 'Bibek Chand Sah',
         'Name': 'Bibek Chand Sah',
@@ -32,6 +32,387 @@
         'Nationality': 'Nepalese',
         'No. of Backlogs': '0' // Adding common field
     };
+
+    // Load form data from localStorage or use defaults
+    let formData = loadFormData();
+
+    // Function to load form data from localStorage
+    function loadFormData() {
+        try {
+            const saved = localStorage.getItem('googleFormFillerData');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Merge with defaults to ensure we have all base fields
+                return { ...defaultFormData, ...parsed };
+            }
+        } catch (error) {
+            console.log('Error loading saved data:', error);
+        }
+        return { ...defaultFormData };
+    }
+
+    // Function to save form data to localStorage
+    function saveFormData(data) {
+        try {
+            localStorage.setItem('googleFormFillerData', JSON.stringify(data));
+            console.log('✅ Form data saved to localStorage');
+        } catch (error) {
+            console.error('❌ Error saving form data:', error);
+        }
+    }
+
+    // Function to show customization modal
+    function showCustomizationModal() {
+        return new Promise((resolve) => {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-family: Arial, sans-serif;
+            `;
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 600px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                position: relative;
+            `;
+
+            // Create modal content using DOM methods (safer than innerHTML)
+
+            // Create title
+            const title = document.createElement('h2');
+            title.style.cssText = 'margin: 0 0 20px 0; color: #333; text-align: center;';
+            title.textContent = '🎯 Customize Your Form Data';
+            modal.appendChild(title);
+
+            // Create description
+            const description = document.createElement('p');
+            description.style.cssText = 'color: #666; text-align: center; margin-bottom: 20px;';
+            description.textContent = 'Edit the values below to match your information';
+            modal.appendChild(description);
+
+            // Create form
+            const form = document.createElement('form');
+            form.id = 'customization-form';
+            form.style.cssText = 'display: grid; gap: 12px;';
+
+            // Function to create a field row
+            function createFieldRow(key, value, isCustom = false) {
+                const fieldId = `field-${key.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+                // Create field container
+                const fieldDiv = document.createElement('div');
+                fieldDiv.style.cssText = `display: grid; grid-template-columns: 1fr 2fr ${isCustom ? 'auto' : ''}; gap: 8px; align-items: center;`;
+                fieldDiv.setAttribute('data-field-key', key);
+
+                // Create label
+                const label = document.createElement('label');
+                label.setAttribute('for', fieldId);
+                label.style.cssText = 'font-weight: bold; color: #333; font-size: 14px;';
+                label.textContent = `${key}:`;
+
+                // Create input
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = fieldId;
+                input.value = value;
+                input.setAttribute('data-key', key);
+                input.style.cssText = `
+                    padding: 8px 12px;
+                    border: 2px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    transition: border-color 0.2s;
+                `;
+
+                // Add focus/blur events
+                input.addEventListener('focus', () => input.style.borderColor = '#4caf50');
+                input.addEventListener('blur', () => input.style.borderColor = '#ddd');
+
+                fieldDiv.appendChild(label);
+                fieldDiv.appendChild(input);
+
+                // Add delete button for custom fields
+                if (isCustom) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.title = 'Delete this field';
+                    deleteBtn.style.cssText = `
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        padding: 8px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        transition: background 0.2s;
+                    `;
+                    deleteBtn.addEventListener('mouseenter', () => deleteBtn.style.background = '#da190b');
+                    deleteBtn.addEventListener('mouseleave', () => deleteBtn.style.background = '#f44336');
+                    deleteBtn.addEventListener('click', () => {
+                        fieldDiv.remove();
+                    });
+                    fieldDiv.appendChild(deleteBtn);
+                }
+
+                return fieldDiv;
+            }
+
+            // Add default fields
+            Object.entries(formData).forEach(([key, value]) => {
+                // Skip duplicate entries (typo handlers)
+                if (key === 'Mali ID' || key === '10t %') return;
+
+                const isCustomField = !defaultFormData.hasOwnProperty(key);
+                const fieldRow = createFieldRow(key, value, isCustomField);
+                form.appendChild(fieldRow);
+            });
+
+            modal.appendChild(form);
+
+            // Create "Add Custom Field" section
+            const addFieldSection = document.createElement('div');
+            addFieldSection.style.cssText = 'margin-top: 16px; padding-top: 16px; border-top: 2px solid #eee;';
+
+            const addFieldTitle = document.createElement('h3');
+            addFieldTitle.style.cssText = 'margin: 0 0 12px 0; color: #333; font-size: 16px; text-align: center;';
+            addFieldTitle.textContent = '➕ Add Custom Field';
+
+            const addFieldContainer = document.createElement('div');
+            addFieldContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px;';
+
+            // Field name input
+            const fieldNameInput = document.createElement('input');
+            fieldNameInput.type = 'text';
+            fieldNameInput.placeholder = 'Field Name (e.g., "Father Name")';
+            fieldNameInput.style.cssText = `
+                padding: 8px 12px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s;
+            `;
+            fieldNameInput.addEventListener('focus', () => fieldNameInput.style.borderColor = '#4caf50');
+            fieldNameInput.addEventListener('blur', () => fieldNameInput.style.borderColor = '#ddd');
+
+            // Field value input
+            const fieldValueInput = document.createElement('input');
+            fieldValueInput.type = 'text';
+            fieldValueInput.placeholder = 'Field Value (e.g., "John Doe")';
+            fieldValueInput.style.cssText = `
+                padding: 8px 12px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s;
+            `;
+            fieldValueInput.addEventListener('focus', () => fieldValueInput.style.borderColor = '#4caf50');
+            fieldValueInput.addEventListener('blur', () => fieldValueInput.style.borderColor = '#ddd');
+
+            // Add button
+            const addButton = document.createElement('button');
+            addButton.type = 'button';
+            addButton.textContent = '➕';
+            addButton.title = 'Add this field';
+            addButton.style.cssText = `
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 10px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background 0.2s;
+            `;
+            addButton.addEventListener('mouseenter', () => addButton.style.background = '#45a049');
+            addButton.addEventListener('mouseleave', () => addButton.style.background = '#4caf50');
+
+            // Add field functionality
+            function addCustomField() {
+                const fieldName = fieldNameInput.value.trim();
+                const fieldValue = fieldValueInput.value.trim();
+
+                if (!fieldName) {
+                    alert('Please enter a field name!');
+                    fieldNameInput.focus();
+                    return;
+                }
+
+                // Check if field already exists
+                const existingField = form.querySelector(`[data-field-key="${fieldName}"]`);
+                if (existingField) {
+                    alert('A field with this name already exists!');
+                    fieldNameInput.focus();
+                    return;
+                }
+
+                // Create and add the new field
+                const newFieldRow = createFieldRow(fieldName, fieldValue, true);
+                form.appendChild(newFieldRow);
+
+                // Clear inputs
+                fieldNameInput.value = '';
+                fieldValueInput.value = '';
+                fieldNameInput.focus();
+            }
+
+            addButton.addEventListener('click', addCustomField);
+
+            // Allow Enter key to add field
+            fieldNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    fieldValueInput.focus();
+                }
+            });
+
+            fieldValueInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomField();
+                }
+            });
+
+            addFieldContainer.appendChild(fieldNameInput);
+            addFieldContainer.appendChild(fieldValueInput);
+            addFieldContainer.appendChild(addButton);
+
+            addFieldSection.appendChild(addFieldTitle);
+            addFieldSection.appendChild(addFieldContainer);
+
+            // Add tip for custom fields
+            const customFieldTip = document.createElement('div');
+            customFieldTip.style.cssText = 'text-align: center; font-size: 12px; color: #666; margin-top: 8px;';
+            customFieldTip.textContent = '💡 Custom fields are saved permanently in your browser';
+
+            addFieldSection.appendChild(customFieldTip);
+            modal.appendChild(addFieldSection);
+
+            // Create button container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; margin-top: 24px;';
+
+            // Create save button
+            const saveButton = document.createElement('button');
+            saveButton.id = 'save-data';
+            saveButton.textContent = '💾 Save & Fill Form';
+            saveButton.style.cssText = `
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.2s;
+            `;
+            saveButton.addEventListener('mouseenter', () => saveButton.style.background = '#45a049');
+            saveButton.addEventListener('mouseleave', () => saveButton.style.background = '#4caf50');
+
+            // Create cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.id = 'cancel-modal';
+            cancelButton.textContent = '❌ Cancel';
+            cancelButton.style.cssText = `
+                background: #f44336;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.2s;
+            `;
+            cancelButton.addEventListener('mouseenter', () => cancelButton.style.background = '#da190b');
+            cancelButton.addEventListener('mouseleave', () => cancelButton.style.background = '#f44336');
+
+            buttonContainer.appendChild(saveButton);
+            buttonContainer.appendChild(cancelButton);
+            modal.appendChild(buttonContainer);
+
+            // Create tip text
+            const tip = document.createElement('div');
+            tip.style.cssText = 'text-align: center; margin-top: 16px; font-size: 12px; color: #666;';
+            tip.textContent = '💡 Tip: Your data will be saved for this session only';
+            modal.appendChild(tip);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Add event listeners (buttons already have references)
+            saveButton.addEventListener('click', () => {
+                // Collect all form values
+                const inputs = modal.querySelectorAll('input[data-key]');
+                const newFormData = {};
+
+                inputs.forEach(input => {
+                    const key = input.getAttribute('data-key');
+                    const value = input.value.trim();
+                    newFormData[key] = value;
+
+                    // Also update typo handlers
+                    if (key === 'Mail ID') {
+                        newFormData['Mali ID'] = value;
+                    }
+                    if (key === '10th %') {
+                        newFormData['10t %'] = value;
+                    }
+                });
+
+                // Update global formData
+                formData = newFormData;
+
+                // Save to localStorage
+                saveFormData(newFormData);
+
+                // Remove modal
+                document.body.removeChild(overlay);
+
+                // Show success message
+                console.log('✅ Form data updated and saved to localStorage!');
+
+                // Resolve with success
+                resolve(true);
+            });
+
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+                resolve(false);
+            });
+
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                    resolve(false);
+                }
+            });
+
+            // Focus first input
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        });
+    }
 
     // Function to find field title and return the corresponding value
     function getValueForField(titleText) {
@@ -105,12 +486,12 @@
                     // Highlight the option for manual selection
                     console.log(`🎯 Highlighting "${value}" option for manual selection`);
 
-                    // Add visual highlighting with a distinctive style
+                    // Add visual highlighting with a distinctive green style
                     const originalStyle = targetOption.style.cssText;
                     targetOption.style.cssText += `
-                        background: linear-gradient(45deg, #ffeb3b, #ffc107) !important;
-                        border: 3px solid #ff5722 !important;
-                        box-shadow: 0 0 15px #ff5722, inset 0 0 10px rgba(255,87,34,0.3) !important;
+                        background: linear-gradient(45deg, #4caf50, #8bc34a) !important;
+                        border: 3px solid #2e7d32 !important;
+                        box-shadow: 0 0 15px #4caf50, inset 0 0 10px rgba(76,175,80,0.3) !important;
                         transform: scale(1.02) !important;
                         z-index: 9999 !important;
                         position: relative !important;
@@ -123,7 +504,7 @@
                         top: -25px;
                         left: 50%;
                         transform: translateX(-50%);
-                        background: #ff5722;
+                        background: #2e7d32;
                         color: white;
                         padding: 2px 8px;
                         border-radius: 4px;
@@ -245,26 +626,31 @@
         });
 
         // Add click handler
-        button.addEventListener('click', (e) => {
+        button.addEventListener('click', async (e) => {
             e.preventDefault();
 
-            // Show instructions
-            const instructions = `
-🤖 GOOGLE FORM AUTO-FILLER INSTRUCTIONS:
+            // Show customization modal first
+            const shouldProceed = await showCustomizationModal();
 
-✅ TEXT FIELDS: Will be filled automatically
-🎯 DROPDOWNS: Will be highlighted - you need to click them manually
+            if (shouldProceed) {
+                // Show instructions after customization
+                const instructions = `
+🤖 GOOGLE FORM AUTO-FILLER READY!
 
-The script will:
-1. Fill all text inputs automatically
-2. Highlight dropdown options with bright colors and labels
+✅ TEXT FIELDS: Will be filled automatically with your custom data
+🎯 DROPDOWNS: Will be highlighted in green - you need to click them manually
+
+The script will now:
+1. Fill all text inputs automatically with your customized values
+2. Highlight dropdown options with bright green colors and labels
 3. You manually click the highlighted dropdown options
 
-Ready to start?
-            `;
+Ready to start filling the form?
+                `;
 
-            if (confirm(instructions)) {
-                fillForm();
+                if (confirm(instructions)) {
+                    fillForm();
+                }
             }
         });
 
