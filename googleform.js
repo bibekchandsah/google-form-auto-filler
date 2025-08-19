@@ -64,6 +64,9 @@
 
     // Load tagged data from localStorage or use defaults
     let taggedData = loadTaggedData();
+    
+    // Track modal state for toggle functionality
+    let isCustomizationModalOpen = false;
 
     // Function to load tagged data from localStorage
     function loadTaggedData() {
@@ -130,8 +133,23 @@
         console.log('💡 Use the customize button to modify mappings');
     }
 
-    // Make function available globally for console access
+    // Make functions available globally for console access
     window.showCurrentMappings = showCurrentMappings;
+    
+    // Global function to close customization modal (for keyboard shortcuts)
+    window.closeCustomizationModal = function() {
+        if (isCustomizationModalOpen) {
+            // Find and close the modal
+            const overlay = document.querySelector('#form-filler-modal-overlay');
+            if (overlay) {
+                document.body.removeChild(overlay);
+                isCustomizationModalOpen = false;
+                console.log('🎹 Customization modal closed via keyboard shortcut');
+                return true;
+            }
+        }
+        return false;
+    };
 
     // Function to get value for a field using tag system
     function getValueForField(titleText) {
@@ -159,6 +177,7 @@
         return new Promise((resolve) => {
             // Create modal overlay
             const overlay = document.createElement('div');
+            overlay.id = 'form-filler-modal-overlay';
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -708,6 +727,17 @@
             modal.appendChild(tip);
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
+            
+            // Mark modal as open
+            isCustomizationModalOpen = true;
+
+            // Function to close modal and update state
+            function closeModal() {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+                isCustomizationModalOpen = false;
+            }
 
             // Function to collect and save data
             function collectAndSaveData() {
@@ -734,8 +764,8 @@
             saveOnlyButton.addEventListener('click', () => {
                 collectAndSaveData();
                 
-                // Remove modal
-                document.body.removeChild(overlay);
+                // Close modal
+                closeModal();
 
                 // Show success message
                 alert('💾 Data saved successfully! You can now fill forms with your saved data.');
@@ -748,22 +778,22 @@
             saveAndFillButton.addEventListener('click', () => {
                 collectAndSaveData();
                 
-                // Remove modal
-                document.body.removeChild(overlay);
+                // Close modal
+                closeModal();
 
                 // Resolve with true (proceed to fill form)
                 resolve(true);
             });
 
             cancelButton.addEventListener('click', () => {
-                document.body.removeChild(overlay);
+                closeModal();
                 resolve(false);
             });
 
             // Close on overlay click
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
-                    document.body.removeChild(overlay);
+                    closeModal();
                     resolve(false);
                 }
             });
@@ -1060,6 +1090,31 @@ Ready to start filling the form?
                     showCurrentMappings();
                     alert('📋 Current mappings displayed in console! Press F12 to view.');
                 }
+            },
+            {
+                text: '🎹 Shortcuts',
+                id: 'shortcuts-option',
+                action: () => {
+                    hideMenu();
+                    const shortcutsInfo = `🎹 KEYBOARD SHORTCUTS ENABLED:
+
+Alt+F: Quick Fill Form (with saved data)
+Alt+C: Customize Data (Toggle open/close)
+Alt+M: View Mappings
+
+💡 Tips:
+• Alt+F instantly fills the form with your saved data
+• Alt+C opens/closes the customize modal (toggle)
+• Alt+M shows your current tag mappings in console
+• All shortcuts work anywhere on the Google Forms page
+• Shortcuts override browser defaults for better functionality`;
+                    
+                    alert(shortcutsInfo);
+                    console.log('🎹 Keyboard shortcuts enabled:');
+                    console.log('   Alt+F: Quick Fill Form (with saved data)');
+                    console.log('   Alt+C: Customize Data (Toggle open/close)');
+                    console.log('   Alt+M: View Mappings');
+                }
             }
         ];
 
@@ -1145,10 +1200,104 @@ Ready to start filling the form?
         document.body.appendChild(menu);
     }
 
+    // Keyboard shortcuts functionality
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Check for Alt + F (case insensitive)
+            if (e.altKey && (e.key === 'f' || e.key === 'F')) {
+                // Prevent default browser behavior (like opening File menu)
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('🎹 Keyboard shortcut Alt+F triggered - Quick Fill Form');
+                
+                // Quick fill form with saved data (same as "Fill Form (Saved Data)" menu option)
+                const instructions = `
+🎹 KEYBOARD SHORTCUT ACTIVATED (Alt+F)
+
+🤖 GOOGLE FORM AUTO-FILLER READY!
+
+✅ TEXT FIELDS: Will be filled automatically with your saved data
+🎯 DROPDOWNS: Will be highlighted in green - you need to click them manually
+
+The script will now:
+1. Fill all text inputs automatically with your saved values
+2. Highlight dropdown options with bright green colors and labels
+3. You manually click the highlighted dropdown options
+
+Ready to start filling the form?
+                `;
+
+                if (confirm(instructions)) {
+                    fillForm();
+                } else {
+                    console.log('🎹 Quick fill cancelled by user');
+                }
+            }
+            
+            // Check for Alt + C for Customize Data (Toggle)
+            else if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle modal - close if open, open if closed
+                if (isCustomizationModalOpen) {
+                    console.log('🎹 Keyboard shortcut Alt+C triggered - Closing Customize Data');
+                    window.closeCustomizationModal();
+                } else {
+                    console.log('🎹 Keyboard shortcut Alt+C triggered - Opening Customize Data');
+                    
+                    // Open customization modal
+                    showCustomizationModal().then(shouldFillForm => {
+                        if (shouldFillForm) {
+                            const instructions = `
+🎹 KEYBOARD SHORTCUT RESULT (Alt+C → Fill Form)
+
+🤖 GOOGLE FORM AUTO-FILLER READY!
+
+✅ TEXT FIELDS: Will be filled automatically with your saved data
+🎯 DROPDOWNS: Will be highlighted in green - you need to click them manually
+
+The script will now:
+1. Fill all text inputs automatically with your saved values
+2. Highlight dropdown options with bright green colors and labels
+3. You manually click the highlighted dropdown options
+
+Ready to start filling the form?
+                            `;
+
+                            if (confirm(instructions)) {
+                                fillForm();
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // Check for Alt + M for View Mappings
+            else if (e.altKey && (e.key === 'm' || e.key === 'M')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('🎹 Keyboard shortcut Alt+M triggered - View Mappings');
+                showCurrentMappings();
+                alert('📋 Current mappings displayed in console! Press F12 to view.\n\n🎹 Triggered by Alt+M shortcut');
+            }
+        });
+        
+        console.log('🎹 Keyboard shortcuts enabled:');
+        console.log('   Alt+F: Quick Fill Form (with saved data)');
+        console.log('   Alt+C: Customize Data');
+        console.log('   Alt+M: View Mappings');
+    }
+
     // Wait for the page to load completely
     function init() {
         // Add the fill button
         addFillButton();
+        
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
 
         // Optional: Auto-fill on page load (uncomment if desired)
         // setTimeout(fillForm, 2000);
