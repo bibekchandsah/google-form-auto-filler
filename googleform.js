@@ -897,51 +897,80 @@
         }
     }
 
-    // Function to add buttons to the form
+    // Function to add floating icon with menu
     function addFillButton() {
-        // Check if buttons already exist
-        if (document.getElementById('auto-fill-btn')) return;
+        // Check if icon already exists
+        if (document.getElementById('form-filler-icon')) return;
 
-        // Create the main fill button
-        const button = document.createElement('button');
-        button.id = 'auto-fill-btn';
-        button.textContent = '🚀 Fill Form (Manual Dropdowns)';
-        button.style.cssText = `
+        // Create floating icon container
+        const iconContainer = document.createElement('div');
+        iconContainer.id = 'form-filler-icon';
+        iconContainer.style.cssText = `
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
-            z-index: 9999;
-            background: #4285f4;
-            color: white;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 6px;
+            z-index: 10000;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         `;
 
-        // Add hover effect
-        button.addEventListener('mouseenter', () => {
-            button.style.background = '#3367d6';
+        // Create the icon image
+        const icon = document.createElement('img');
+        icon.src = 'https://img.icons8.com/?size=256&id=q3wGnFmrhHJI&format=png';
+        icon.alt = 'Form Filler';
+        icon.style.cssText = `
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            background: white;
+            padding: 8px;
+        `;
+
+        // Add hover effect to icon
+        iconContainer.addEventListener('mouseenter', () => {
+            icon.style.transform = 'scale(1.1)';
+            icon.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
         });
 
-        button.addEventListener('mouseleave', () => {
-            button.style.background = '#4285f4';
+        iconContainer.addEventListener('mouseleave', () => {
+            icon.style.transform = 'scale(1)';
+            icon.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
         });
 
-        // Add click handler
-        button.addEventListener('click', async (e) => {
-            e.preventDefault();
+        iconContainer.appendChild(icon);
 
-            // Show customization modal first
-            const shouldProceed = await showCustomizationModal();
+        // Create menu container
+        const menu = document.createElement('div');
+        menu.id = 'form-filler-menu';
+        menu.style.cssText = `
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9999;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            padding: 8px;
+            display: none;
+            min-width: 200px;
+            font-family: Arial, sans-serif;
+        `;
 
-            if (shouldProceed) {
-                // Show instructions after customization
-                const instructions = `
+        // Create menu items
+        const menuItems = [
+            {
+                text: '🚀 Fill Form (Manual Dropdowns)',
+                id: 'fill-form-option',
+                action: async () => {
+                    hideMenu();
+                    // Show customization modal first
+                    const shouldProceed = await showCustomizationModal();
+
+                    if (shouldProceed) {
+                        // Show instructions after customization
+                        const instructions = `
 🤖 GOOGLE FORM AUTO-FILLER READY!
 
 ✅ TEXT FIELDS: Will be filled automatically with your custom data
@@ -953,54 +982,105 @@ The script will now:
 3. You manually click the highlighted dropdown options
 
 Ready to start filling the form?
-                `;
+                        `;
 
-                if (confirm(instructions)) {
-                    fillForm();
+                        if (confirm(instructions)) {
+                            fillForm();
+                        }
+                    }
                 }
+            },
+            {
+                text: '📋 View Mappings',
+                id: 'view-mappings-option',
+                action: () => {
+                    hideMenu();
+                    showCurrentMappings();
+                    alert('📋 Current mappings displayed in console! Press F12 to view.');
+                }
+            }
+        ];
+
+        // Create menu items
+        menuItems.forEach((item, index) => {
+            const menuItem = document.createElement('div');
+            menuItem.id = item.id;
+            menuItem.textContent = item.text;
+            menuItem.style.cssText = `
+                padding: 12px 16px;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: background 0.2s ease;
+                font-size: 14px;
+                font-weight: 500;
+                color: #333;
+                ${index > 0 ? 'border-top: 1px solid #eee;' : ''}
+            `;
+
+            // Add hover effect
+            menuItem.addEventListener('mouseenter', () => {
+                menuItem.style.background = '#f5f5f5';
+            });
+
+            menuItem.addEventListener('mouseleave', () => {
+                menuItem.style.background = 'transparent';
+            });
+
+            // Add click handler
+            menuItem.addEventListener('click', item.action);
+
+            menu.appendChild(menuItem);
+        });
+
+        // Function to show menu
+        function showMenu() {
+            menu.style.display = 'block';
+            menu.style.opacity = '0';
+            menu.style.transform = 'translateY(10px)';
+
+            // Animate in
+            setTimeout(() => {
+                menu.style.transition = 'all 0.3s ease';
+                menu.style.opacity = '1';
+                menu.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+        // Function to hide menu
+        function hideMenu() {
+            menu.style.transition = 'all 0.3s ease';
+            menu.style.opacity = '0';
+            menu.style.transform = 'translateY(10px)';
+
+            setTimeout(() => {
+                menu.style.display = 'none';
+            }, 300);
+        }
+
+        // Toggle menu on icon click
+        let menuVisible = false;
+        iconContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (menuVisible) {
+                hideMenu();
+                menuVisible = false;
+            } else {
+                showMenu();
+                menuVisible = true;
             }
         });
 
-        // Create the view mappings button
-        const viewButton = document.createElement('button');
-        viewButton.id = 'view-mappings-btn';
-        viewButton.textContent = '📋 View Mappings';
-        viewButton.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            z-index: 9999;
-            background: #ff9800;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
-        `;
-
-        // Add hover effect for view button
-        viewButton.addEventListener('mouseenter', () => {
-            viewButton.style.background = '#f57c00';
+        // Hide menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (menuVisible && !menu.contains(e.target) && !iconContainer.contains(e.target)) {
+                hideMenu();
+                menuVisible = false;
+            }
         });
 
-        viewButton.addEventListener('mouseleave', () => {
-            viewButton.style.background = '#ff9800';
-        });
-
-        // Add click handler for view button
-        viewButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            showCurrentMappings();
-            alert('📋 Current mappings displayed in console! Press F12 to view.');
-        });
-
-        // Add buttons to page
-        document.body.appendChild(button);
-        document.body.appendChild(viewButton);
+        // Add elements to page
+        document.body.appendChild(iconContainer);
+        document.body.appendChild(menu);
     }
 
     // Wait for the page to load completely
