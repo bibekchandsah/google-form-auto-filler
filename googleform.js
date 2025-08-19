@@ -151,6 +151,358 @@
         return false;
     };
 
+    // Data Export Functions
+    function exportDataAsJSON() {
+        try {
+            const exportData = {
+                version: "1.0",
+                exportDate: new Date().toISOString(),
+                tags: taggedData.tags,
+                fieldMappings: taggedData.fieldMappings,
+                metadata: {
+                    totalTags: Object.keys(taggedData.tags).length,
+                    totalMappings: Object.keys(taggedData.fieldMappings).length
+                }
+            };
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `google-form-filler-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            console.log('📁 Data exported as JSON successfully');
+            alert('📁 Data exported as JSON file successfully!\n\nFile saved to your Downloads folder.');
+            return true;
+        } catch (error) {
+            console.error('❌ Error exporting JSON:', error);
+            alert('❌ Error exporting data as JSON. Check console for details.');
+            return false;
+        }
+    }
+
+    function exportDataAsCSV() {
+        try {
+            // Create CSV content
+            let csvContent = 'Type,Key,Value,Description\n';
+
+            // Add tags
+            Object.entries(taggedData.tags).forEach(([tagName, value]) => {
+                const escapedValue = `"${value.replace(/"/g, '""')}"`;
+                csvContent += `Tag,${tagName},${escapedValue},Tag value\n`;
+            });
+
+            // Add field mappings
+            Object.entries(taggedData.fieldMappings).forEach(([fieldName, tagName]) => {
+                const escapedFieldName = `"${fieldName.replace(/"/g, '""')}"`;
+                csvContent += `Mapping,${escapedFieldName},${tagName},Field to tag mapping\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `google-form-filler-data-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            console.log('📊 Data exported as CSV successfully');
+            alert('📊 Data exported as CSV file successfully!\n\nFile saved to your Downloads folder.');
+            return true;
+        } catch (error) {
+            console.error('❌ Error exporting CSV:', error);
+            alert('❌ Error exporting data as CSV. Check console for details.');
+            return false;
+        }
+    }
+
+    // Data Import Functions
+    function importDataFromJSON() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+
+        input.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+
+                    // Validate imported data structure
+                    if (!importedData.tags || !importedData.fieldMappings) {
+                        throw new Error('Invalid JSON format: missing tags or fieldMappings');
+                    }
+
+                    // Merge with existing data (imported data takes precedence)
+                    const mergedData = {
+                        tags: { ...taggedData.tags, ...importedData.tags },
+                        fieldMappings: { ...taggedData.fieldMappings, ...importedData.fieldMappings }
+                    };
+
+                    // Update global data and save
+                    taggedData = mergedData;
+                    saveTaggedData(taggedData);
+
+                    const importedTags = Object.keys(importedData.tags).length;
+                    const importedMappings = Object.keys(importedData.fieldMappings).length;
+
+                    console.log('📁 JSON data imported successfully');
+                    alert(`📁 JSON data imported successfully!\n\n✅ Imported ${importedTags} tags\n✅ Imported ${importedMappings} field mappings\n\nData has been merged with your existing data.`);
+
+                } catch (error) {
+                    console.error('❌ Error importing JSON:', error);
+                    alert(`❌ Error importing JSON file:\n\n${error.message}\n\nPlease check the file format and try again.`);
+                }
+            };
+
+            reader.readAsText(file);
+        });
+
+        input.click();
+    }
+
+    function importDataFromCSV() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+
+        input.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csvContent = e.target.result;
+                    const lines = csvContent.split('\n');
+
+                    // Skip header line
+                    const dataLines = lines.slice(1).filter(line => line.trim());
+
+                    const importedTags = {};
+                    const importedMappings = {};
+
+                    dataLines.forEach(line => {
+                        const [type, key, value] = line.split(',').map(cell =>
+                            cell.replace(/^"(.*)"$/, '$1').replace(/""/g, '"')
+                        );
+
+                        if (type === 'Tag' && key && value) {
+                            importedTags[key] = value;
+                        } else if (type === 'Mapping' && key && value) {
+                            importedMappings[key] = value;
+                        }
+                    });
+
+                    if (Object.keys(importedTags).length === 0 && Object.keys(importedMappings).length === 0) {
+                        throw new Error('No valid data found in CSV file');
+                    }
+
+                    // Merge with existing data
+                    const mergedData = {
+                        tags: { ...taggedData.tags, ...importedTags },
+                        fieldMappings: { ...taggedData.fieldMappings, ...importedMappings }
+                    };
+
+                    // Update global data and save
+                    taggedData = mergedData;
+                    saveTaggedData(taggedData);
+
+                    const importedTagCount = Object.keys(importedTags).length;
+                    const importedMappingCount = Object.keys(importedMappings).length;
+
+                    console.log('📊 CSV data imported successfully');
+                    alert(`📊 CSV data imported successfully!\n\n✅ Imported ${importedTagCount} tags\n✅ Imported ${importedMappingCount} field mappings\n\nData has been merged with your existing data.`);
+
+                } catch (error) {
+                    console.error('❌ Error importing CSV:', error);
+                    alert(`❌ Error importing CSV file:\n\n${error.message}\n\nPlease check the file format and try again.`);
+                }
+            };
+
+            reader.readAsText(file);
+        });
+
+        input.click();
+    }
+
+    // Show backup/import options modal
+    function showBackupImportModal() {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'backup-import-modal-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        `;
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        `;
+
+        // Create title
+        const title = document.createElement('h2');
+        title.style.cssText = 'margin: 0 0 24px 0; color: #333; font-size: 24px;';
+        title.textContent = '💾 Backup & Import Data';
+
+        // Create description
+        const description = document.createElement('p');
+        description.style.cssText = 'color: #666; margin-bottom: 32px; line-height: 1.5;';
+        description.textContent = 'Export your form data for backup or import data from another device';
+
+        // Create button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;';
+
+        // Create export buttons
+        const exportJSONBtn = document.createElement('button');
+        exportJSONBtn.textContent = '📁 Export JSON';
+        exportJSONBtn.style.cssText = `
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        `;
+        exportJSONBtn.addEventListener('mouseenter', () => exportJSONBtn.style.background = '#1976d2');
+        exportJSONBtn.addEventListener('mouseleave', () => exportJSONBtn.style.background = '#2196f3');
+        exportJSONBtn.addEventListener('click', () => {
+            exportDataAsJSON();
+            document.body.removeChild(overlay);
+        });
+
+        const exportCSVBtn = document.createElement('button');
+        exportCSVBtn.textContent = '📊 Export CSV';
+        exportCSVBtn.style.cssText = `
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        `;
+        exportCSVBtn.addEventListener('mouseenter', () => exportCSVBtn.style.background = '#45a049');
+        exportCSVBtn.addEventListener('mouseleave', () => exportCSVBtn.style.background = '#4caf50');
+        exportCSVBtn.addEventListener('click', () => {
+            exportDataAsCSV();
+            document.body.removeChild(overlay);
+        });
+
+        const importJSONBtn = document.createElement('button');
+        importJSONBtn.textContent = '📁 Import JSON';
+        importJSONBtn.style.cssText = `
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        `;
+        importJSONBtn.addEventListener('mouseenter', () => importJSONBtn.style.background = '#f57c00');
+        importJSONBtn.addEventListener('mouseleave', () => importJSONBtn.style.background = '#ff9800');
+        importJSONBtn.addEventListener('click', () => {
+            importDataFromJSON();
+            document.body.removeChild(overlay);
+        });
+
+        const importCSVBtn = document.createElement('button');
+        importCSVBtn.textContent = '📊 Import CSV';
+        importCSVBtn.style.cssText = `
+            background: #9c27b0;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        `;
+        importCSVBtn.addEventListener('mouseenter', () => importCSVBtn.style.background = '#7b1fa2');
+        importCSVBtn.addEventListener('mouseleave', () => importCSVBtn.style.background = '#9c27b0');
+        importCSVBtn.addEventListener('click', () => {
+            importDataFromCSV();
+            document.body.removeChild(overlay);
+        });
+
+        // Create close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '❌ Close';
+        closeBtn.style.cssText = `
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        `;
+        closeBtn.addEventListener('mouseenter', () => closeBtn.style.background = '#da190b');
+        closeBtn.addEventListener('mouseleave', () => closeBtn.style.background = '#f44336');
+        closeBtn.addEventListener('click', () => document.body.removeChild(overlay));
+
+        // Add elements to modal
+        buttonContainer.appendChild(exportJSONBtn);
+        buttonContainer.appendChild(exportCSVBtn);
+        buttonContainer.appendChild(importJSONBtn);
+        buttonContainer.appendChild(importCSVBtn);
+
+        modal.appendChild(title);
+        modal.appendChild(description);
+        modal.appendChild(buttonContainer);
+        modal.appendChild(closeBtn);
+        overlay.appendChild(modal);
+
+        // Close on overlay click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+
+        document.body.appendChild(overlay);
+    }
+
     // Progress indicator and success animation functions
     function createProgressIndicator() {
         // Remove existing progress indicator if any
@@ -1642,6 +1994,14 @@ Alt+M: View Mappings
                     console.log('   Alt+F: Quick Fill Form (with saved data)');
                     console.log('   Alt+C: Customize Data (Toggle open/close)');
                     console.log('   Alt+M: View Mappings');
+                }
+            },
+            {
+                text: '💾 Backup & Import',
+                id: 'backup-import-option',
+                action: () => {
+                    hideMenu();
+                    showBackupImportModal();
                 }
             }
         ];
