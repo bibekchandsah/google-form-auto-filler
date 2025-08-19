@@ -640,25 +640,43 @@
 
             // Create button container
             const buttonContainer = document.createElement('div');
-            buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; margin-top: 24px;';
+            buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap;';
 
-            // Create save button
-            const saveButton = document.createElement('button');
-            saveButton.id = 'save-data';
-            saveButton.textContent = '💾 Save & Fill Form';
-            saveButton.style.cssText = `
-                background: #4caf50;
+            // Create save only button
+            const saveOnlyButton = document.createElement('button');
+            saveOnlyButton.id = 'save-only';
+            saveOnlyButton.textContent = '💾 Save';
+            saveOnlyButton.style.cssText = `
+                background: #2196f3;
                 color: white;
                 border: none;
-                padding: 12px 24px;
+                padding: 12px 20px;
                 border-radius: 6px;
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: bold;
                 cursor: pointer;
                 transition: background 0.2s;
             `;
-            saveButton.addEventListener('mouseenter', () => saveButton.style.background = '#45a049');
-            saveButton.addEventListener('mouseleave', () => saveButton.style.background = '#4caf50');
+            saveOnlyButton.addEventListener('mouseenter', () => saveOnlyButton.style.background = '#1976d2');
+            saveOnlyButton.addEventListener('mouseleave', () => saveOnlyButton.style.background = '#2196f3');
+
+            // Create save and fill button
+            const saveAndFillButton = document.createElement('button');
+            saveAndFillButton.id = 'save-and-fill';
+            saveAndFillButton.textContent = '🚀 Fill Form';
+            saveAndFillButton.style.cssText = `
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.2s;
+            `;
+            saveAndFillButton.addEventListener('mouseenter', () => saveAndFillButton.style.background = '#45a049');
+            saveAndFillButton.addEventListener('mouseleave', () => saveAndFillButton.style.background = '#4caf50');
 
             // Create cancel button
             const cancelButton = document.createElement('button');
@@ -668,9 +686,9 @@
                 background: #f44336;
                 color: white;
                 border: none;
-                padding: 12px 24px;
+                padding: 12px 20px;
                 border-radius: 6px;
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: bold;
                 cursor: pointer;
                 transition: background 0.2s;
@@ -678,20 +696,21 @@
             cancelButton.addEventListener('mouseenter', () => cancelButton.style.background = '#da190b');
             cancelButton.addEventListener('mouseleave', () => cancelButton.style.background = '#f44336');
 
-            buttonContainer.appendChild(saveButton);
+            buttonContainer.appendChild(saveOnlyButton);
+            buttonContainer.appendChild(saveAndFillButton);
             buttonContainer.appendChild(cancelButton);
             modal.appendChild(buttonContainer);
 
             // Create tip text
             const tip = document.createElement('div');
-            tip.style.cssText = 'text-align: center; margin-top: 16px; font-size: 12px; color: #666;';
-            tip.textContent = '💡 Tip: Your data will be saved for this session only';
+            tip.style.cssText = 'text-align: center; margin-top: 16px; font-size: 12px; color: #666; line-height: 1.4;';
+            tip.textContent = '💡 Save: Store your data for later use | Fill Form: Save data and immediately fill the current form';
             modal.appendChild(tip);
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
 
-            // Add event listeners (buttons already have references)
-            saveButton.addEventListener('click', () => {
+            // Function to collect and save data
+            function collectAndSaveData() {
                 // Collect all tag values
                 const inputs = modal.querySelectorAll('input[data-key]');
                 const newTags = {};
@@ -708,13 +727,31 @@
                 // Save to localStorage
                 saveTaggedData(taggedData);
 
+                console.log('✅ Tagged data updated and saved to localStorage!');
+            }
+
+            // Add event listeners for save only button
+            saveOnlyButton.addEventListener('click', () => {
+                collectAndSaveData();
+                
                 // Remove modal
                 document.body.removeChild(overlay);
 
                 // Show success message
-                console.log('✅ Tagged data updated and saved to localStorage!');
+                alert('💾 Data saved successfully! You can now fill forms with your saved data.');
 
-                // Resolve with success
+                // Resolve with false (don't fill form)
+                resolve(false);
+            });
+
+            // Add event listeners for save and fill button
+            saveAndFillButton.addEventListener('click', () => {
+                collectAndSaveData();
+                
+                // Remove modal
+                document.body.removeChild(overlay);
+
+                // Resolve with true (proceed to fill form)
                 resolve(true);
             });
 
@@ -961,23 +998,23 @@
         // Create menu items
         const menuItems = [
             {
-                text: '🚀 Fill Form (Manual Dropdowns)',
-                id: 'fill-form-option',
+                text: '⚙️ Customize Data',
+                id: 'customize-data-option',
                 action: async () => {
                     hideMenu();
-                    // Show customization modal first
-                    const shouldProceed = await showCustomizationModal();
-
-                    if (shouldProceed) {
-                        // Show instructions after customization
+                    // Show customization modal and handle the result
+                    const shouldFillForm = await showCustomizationModal();
+                    
+                    if (shouldFillForm) {
+                        // User clicked "Fill Form" - show instructions and fill
                         const instructions = `
 🤖 GOOGLE FORM AUTO-FILLER READY!
 
-✅ TEXT FIELDS: Will be filled automatically with your custom data
+✅ TEXT FIELDS: Will be filled automatically with your saved data
 🎯 DROPDOWNS: Will be highlighted in green - you need to click them manually
 
 The script will now:
-1. Fill all text inputs automatically with your customized values
+1. Fill all text inputs automatically with your saved values
 2. Highlight dropdown options with bright green colors and labels
 3. You manually click the highlighted dropdown options
 
@@ -987,6 +1024,31 @@ Ready to start filling the form?
                         if (confirm(instructions)) {
                             fillForm();
                         }
+                    }
+                }
+            },
+            {
+                text: '🚀 Fill Form (Saved Data)',
+                id: 'fill-form-option',
+                action: () => {
+                    hideMenu();
+                    // Fill form with current saved data
+                    const instructions = `
+🤖 GOOGLE FORM AUTO-FILLER READY!
+
+✅ TEXT FIELDS: Will be filled automatically with your saved data
+🎯 DROPDOWNS: Will be highlighted in green - you need to click them manually
+
+The script will now:
+1. Fill all text inputs automatically with your saved values
+2. Highlight dropdown options with bright green colors and labels
+3. You manually click the highlighted dropdown options
+
+Ready to start filling the form?
+                    `;
+
+                    if (confirm(instructions)) {
+                        fillForm();
                     }
                 }
             },
