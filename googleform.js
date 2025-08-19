@@ -338,6 +338,269 @@
         input.click();
     }
 
+    // Field Validation Functions
+    const validators = {
+        email: {
+            pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            message: 'Please enter a valid email address (e.g., user@example.com)',
+            test: (value) => validators.email.pattern.test(value)
+        },
+        phone: {
+            pattern: /^[\+]?[1-9][\d]{0,15}$|^[\+]?[(]?[\d\s\-\(\)]{10,}$/,
+            message: 'Please enter a valid phone number (10+ digits, optional +, spaces, dashes, parentheses)',
+            test: (value) => {
+                const cleaned = value.replace(/[\s\-\(\)]/g, '');
+                return /^[\+]?[1-9][\d]{9,15}$/.test(cleaned);
+            }
+        },
+        percentage: {
+            pattern: /^(100(\.0{1,2})?|[0-9]{1,2}(\.[0-9]{1,2})?)$/,
+            message: 'Please enter a valid percentage (0-100, up to 2 decimal places)',
+            test: (value) => {
+                const num = parseFloat(value);
+                return !isNaN(num) && num >= 0 && num <= 100;
+            }
+        },
+        year: {
+            pattern: /^(19|20)\d{2}$/,
+            message: 'Please enter a valid year (1900-2099)',
+            test: (value) => {
+                const year = parseInt(value);
+                const currentYear = new Date().getFullYear();
+                return year >= 1900 && year <= currentYear + 10;
+            }
+        },
+        rollNumber: {
+            pattern: /^[A-Z0-9]{6,15}$/i,
+            message: 'Please enter a valid roll number (6-15 alphanumeric characters)',
+            test: (value) => validators.rollNumber.pattern.test(value)
+        },
+        name: {
+            pattern: /^[a-zA-Z\s]{2,50}$/,
+            message: 'Please enter a valid name (2-50 characters, letters and spaces only)',
+            test: (value) => validators.name.pattern.test(value.trim())
+        },
+        number: {
+            pattern: /^\d+$/,
+            message: 'Please enter a valid number (digits only)',
+            test: (value) => validators.number.pattern.test(value)
+        }
+    };
+
+    // Function to detect field type based on field name
+    function detectFieldType(fieldName) {
+        const lowerField = fieldName.toLowerCase();
+        
+        // Email detection
+        if (lowerField.includes('email') || lowerField.includes('mail')) {
+            return 'email';
+        }
+        
+        // Phone detection
+        if (lowerField.includes('phone') || lowerField.includes('mobile') || lowerField.includes('contact')) {
+            return 'phone';
+        }
+        
+        // Percentage detection
+        if (lowerField.includes('%') || lowerField.includes('percentage') || lowerField.includes('percent')) {
+            return 'percentage';
+        }
+        
+        // Year detection
+        if (lowerField.includes('year') || lowerField.includes('yop') || lowerField.match(/\b(19|20)\d{2}\b/)) {
+            return 'year';
+        }
+        
+        // Roll number detection
+        if (lowerField.includes('roll') || lowerField.includes('registration') || lowerField.includes('student id')) {
+            return 'rollNumber';
+        }
+        
+        // Name detection
+        if (lowerField.includes('name') && !lowerField.includes('username') && !lowerField.includes('filename')) {
+            return 'name';
+        }
+        
+        // Number detection (backlogs, count, etc.)
+        if (lowerField.includes('backlog') || lowerField.includes('count') || lowerField.includes('number')) {
+            return 'number';
+        }
+        
+        return null; // No specific validation needed
+    }
+
+    // Function to validate a single field
+    function validateField(fieldName, value) {
+        if (!value || value.trim() === '') {
+            return { isValid: true, message: '' }; // Empty fields are allowed
+        }
+
+        const fieldType = detectFieldType(fieldName);
+        if (!fieldType || !validators[fieldType]) {
+            return { isValid: true, message: '' }; // No validation rule found
+        }
+
+        const validator = validators[fieldType];
+        const isValid = validator.test(value.trim());
+        
+        return {
+            isValid,
+            message: isValid ? '' : validator.message,
+            fieldType
+        };
+    }
+
+    // Function to validate all data
+    function validateAllData(data) {
+        const validationResults = {};
+        let hasErrors = false;
+
+        Object.entries(data).forEach(([fieldName, value]) => {
+            const result = validateField(fieldName, value);
+            validationResults[fieldName] = result;
+            if (!result.isValid) {
+                hasErrors = true;
+            }
+        });
+
+        return {
+            hasErrors,
+            results: validationResults
+        };
+    }
+
+    // Function to show validation errors
+    function showValidationErrors(validationResults) {
+        const errors = Object.entries(validationResults.results)
+            .filter(([_, result]) => !result.isValid)
+            .map(([fieldName, result]) => `• ${fieldName}: ${result.message}`)
+            .join('\n');
+
+        const errorMessage = `❌ VALIDATION ERRORS FOUND:\n\n${errors}\n\nPlease fix these errors before saving.`;
+        alert(errorMessage);
+        console.error('Validation errors:', validationResults.results);
+    }
+
+    // Function to add visual validation feedback to inputs
+    function addValidationFeedback(input, validation) {
+        // Remove existing validation classes and icons
+        input.classList.remove('validation-success', 'validation-error');
+        
+        // Remove existing validation elements
+        const existingIcon = input.parentNode.querySelector('.validation-icon');
+        const existingTooltip = input.parentNode.querySelector('.validation-tooltip');
+        if (existingIcon) existingIcon.remove();
+        if (existingTooltip) existingTooltip.remove();
+
+        if (!validation.isValid) {
+            // Add error styling with subtle red border
+            input.classList.add('validation-error');
+            input.style.borderColor = '#f44336';
+            input.style.boxShadow = '0 0 3px rgba(244, 67, 54, 0.2)';
+            
+            // Add small error icon
+            const errorIcon = document.createElement('div');
+            errorIcon.className = 'validation-icon error-icon';
+            errorIcon.style.cssText = `
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 16px;
+                height: 16px;
+                background: #f44336;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 10px;
+                font-weight: bold;
+                cursor: help;
+                z-index: 1;
+            `;
+            errorIcon.textContent = '!';
+            errorIcon.title = validation.message;
+            
+            // Make parent position relative for absolute positioning
+            input.parentNode.style.position = 'relative';
+            input.style.paddingRight = '32px'; // Make room for icon
+            input.parentNode.appendChild(errorIcon);
+            
+            // Add hover tooltip for error message
+            const tooltip = document.createElement('div');
+            tooltip.className = 'validation-tooltip';
+            tooltip.style.cssText = `
+                position: absolute;
+                bottom: -35px;
+                left: 0;
+                right: 0;
+                background: #f44336;
+                color: white;
+                padding: 6px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+                z-index: 1000;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            tooltip.textContent = validation.message;
+            
+            // Show tooltip on hover
+            errorIcon.addEventListener('mouseenter', () => {
+                tooltip.style.opacity = '1';
+            });
+            errorIcon.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+            
+            input.parentNode.appendChild(tooltip);
+            
+        } else if (validation.fieldType) {
+            // Add success styling with subtle green border
+            input.classList.add('validation-success');
+            input.style.borderColor = '#4caf50';
+            input.style.boxShadow = '0 0 3px rgba(76, 175, 80, 0.2)';
+            
+            // Add small success checkmark
+            const successIcon = document.createElement('div');
+            successIcon.className = 'validation-icon success-icon';
+            successIcon.style.cssText = `
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 16px;
+                height: 16px;
+                background: #4caf50;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 10px;
+                font-weight: bold;
+                z-index: 1;
+            `;
+            successIcon.textContent = '✓';
+            successIcon.title = `Valid ${validation.fieldType}`;
+            
+            // Make parent position relative for absolute positioning
+            input.parentNode.style.position = 'relative';
+            input.style.paddingRight = '32px'; // Make room for icon
+            input.parentNode.appendChild(successIcon);
+            
+        } else {
+            // Reset to default styling
+            input.style.borderColor = '#ddd';
+            input.style.boxShadow = 'none';
+            input.style.paddingRight = '12px'; // Reset padding
+            input.parentNode.style.position = 'static';
+        }
+    }
+
     // Show backup/import options modal
     function showBackupImportModal() {
         // Create modal overlay
@@ -794,9 +1057,40 @@
                     transition: border-color 0.2s;
                 `;
 
-                // Add focus/blur events
-                input.addEventListener('focus', () => input.style.borderColor = '#4caf50');
-                input.addEventListener('blur', () => input.style.borderColor = '#ddd');
+                // Add focus/blur events with validation
+                input.addEventListener('focus', () => {
+                    input.style.borderColor = '#2196f3';
+                    input.style.boxShadow = '0 0 0 2px rgba(33, 150, 243, 0.1)';
+                    
+                    // Hide tooltip on focus
+                    const tooltip = input.parentNode.querySelector('.validation-tooltip');
+                    if (tooltip) {
+                        tooltip.style.opacity = '0';
+                    }
+                });
+                
+                input.addEventListener('blur', () => {
+                    // Validate field on blur
+                    const validation = validateField(key, input.value);
+                    addValidationFeedback(input, validation);
+                });
+
+                // Add real-time validation on input
+                input.addEventListener('input', () => {
+                    // Clear previous validation styling during typing
+                    input.classList.remove('validation-success', 'validation-error');
+                    
+                    // Remove validation icons while typing
+                    const existingIcon = input.parentNode.querySelector('.validation-icon');
+                    const existingTooltip = input.parentNode.querySelector('.validation-tooltip');
+                    if (existingIcon) existingIcon.remove();
+                    if (existingTooltip) existingTooltip.remove();
+                    
+                    // Reset padding and styling
+                    input.style.paddingRight = '12px';
+                    input.style.borderColor = '#2196f3';
+                    input.style.boxShadow = '0 0 0 2px rgba(33, 150, 243, 0.1)';
+                });
 
                 fieldDiv.appendChild(label);
                 fieldDiv.appendChild(input);
@@ -1198,6 +1492,91 @@
             addFieldSection.appendChild(customFieldTip);
             modal.appendChild(addFieldSection);
 
+            // Create validation summary section
+            const validationSummary = document.createElement('div');
+            validationSummary.id = 'validation-summary';
+            validationSummary.style.cssText = `
+                margin-top: 16px;
+                padding: 8px 12px;
+                border-radius: 6px;
+                display: none;
+                font-size: 12px;
+                text-align: center;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            `;
+            modal.appendChild(validationSummary);
+
+            // Function to update validation summary
+            function updateValidationSummary() {
+                const inputs = modal.querySelectorAll('input[data-key]');
+                const validationResults = {};
+                let validCount = 0;
+                let errorCount = 0;
+                let totalValidated = 0;
+
+                inputs.forEach(input => {
+                    const tagName = input.getAttribute('data-key');
+                    const value = input.value.trim();
+                    if (value) { // Only validate non-empty fields
+                        const validation = validateField(tagName, value);
+                        validationResults[tagName] = validation;
+                        totalValidated++;
+                        
+                        if (validation.fieldType) { // Field has validation rules
+                            if (validation.isValid) {
+                                validCount++;
+                            } else {
+                                errorCount++;
+                            }
+                        }
+                    }
+                });
+
+                if (totalValidated > 0) {
+                    validationSummary.style.display = 'block';
+                    
+                    if (errorCount > 0) {
+                        validationSummary.style.background = 'rgba(244, 67, 54, 0.1)';
+                        validationSummary.style.border = '1px solid rgba(244, 67, 54, 0.3)';
+                        validationSummary.style.color = '#d32f2f';
+                        validationSummary.innerHTML = `<span style="font-size: 14px;">⚠️</span> ${errorCount} field${errorCount > 1 ? 's need' : ' needs'} attention`;
+                    } else if (validCount > 0) {
+                        validationSummary.style.background = 'rgba(76, 175, 80, 0.1)';
+                        validationSummary.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+                        validationSummary.style.color = '#388e3c';
+                        validationSummary.innerHTML = `<span style="font-size: 14px;">✅</span> All fields validated`;
+                    } else {
+                        validationSummary.style.display = 'none';
+                    }
+                } else {
+                    validationSummary.style.display = 'none';
+                }
+            }
+
+            // Add validation summary update to input events
+            const originalCreateFieldRow = createFieldRow;
+            function createFieldRowWithValidation(key, value, isCustom = false) {
+                const fieldRow = originalCreateFieldRow(key, value, isCustom);
+                const input = fieldRow.querySelector('input');
+                
+                if (input) {
+                    // Add validation summary update to existing events
+                    input.addEventListener('blur', () => {
+                        setTimeout(updateValidationSummary, 100); // Small delay to ensure validation feedback is applied
+                    });
+                    
+                    input.addEventListener('input', () => {
+                        setTimeout(updateValidationSummary, 100);
+                    });
+                }
+                
+                return fieldRow;
+            }
+
+            // Replace createFieldRow with validation-aware version
+            createFieldRow = createFieldRowWithValidation;
+
             // Create button container
             const buttonContainer = document.createElement('div');
             buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap;';
@@ -1280,7 +1659,7 @@
                 isCustomizationModalOpen = false;
             }
 
-            // Function to collect and save data
+            // Function to collect and save data with validation
             function collectAndSaveData() {
                 // Collect all tag values
                 const inputs = modal.querySelectorAll('input[data-key]');
@@ -1292,38 +1671,64 @@
                     newTags[tagName] = value;
                 });
 
+                // Validate all collected data
+                const validationResults = validateAllData(newTags);
+                
+                if (validationResults.hasErrors) {
+                    // Show validation errors and prevent saving
+                    showValidationErrors(validationResults);
+                    
+                    // Add visual feedback to invalid inputs
+                    inputs.forEach(input => {
+                        const tagName = input.getAttribute('data-key');
+                        const validation = validationResults.results[tagName];
+                        if (validation) {
+                            addValidationFeedback(input, validation);
+                        }
+                    });
+                    
+                    return false; // Prevent saving
+                }
+
                 // Update global tagged data
                 taggedData.tags = { ...taggedData.tags, ...newTags };
 
                 // Save to localStorage
                 saveTaggedData(taggedData);
 
-                console.log('✅ Tagged data updated and saved to localStorage!');
+                console.log('✅ Tagged data validated and saved to localStorage!');
+                return true; // Success
             }
 
             // Add event listeners for save only button
             saveOnlyButton.addEventListener('click', () => {
-                collectAndSaveData();
+                const isValid = collectAndSaveData();
+                
+                if (isValid) {
+                    // Close modal
+                    closeModal();
 
-                // Close modal
-                closeModal();
+                    // Show success message
+                    alert('💾 Data validated and saved successfully! You can now fill forms with your saved data.');
 
-                // Show success message
-                alert('💾 Data saved successfully! You can now fill forms with your saved data.');
-
-                // Resolve with false (don't fill form)
-                resolve(false);
+                    // Resolve with false (don't fill form)
+                    resolve(false);
+                }
+                // If validation fails, modal stays open for corrections
             });
 
             // Add event listeners for save and fill button
             saveAndFillButton.addEventListener('click', () => {
-                collectAndSaveData();
+                const isValid = collectAndSaveData();
+                
+                if (isValid) {
+                    // Close modal
+                    closeModal();
 
-                // Close modal
-                closeModal();
-
-                // Resolve with true (proceed to fill form)
-                resolve(true);
+                    // Resolve with true (proceed to fill form)
+                    resolve(true);
+                }
+                // If validation fails, modal stays open for corrections
             });
 
             cancelButton.addEventListener('click', () => {
@@ -1633,10 +2038,48 @@
                     50% { transform: scale(1.05); }
                     100% { transform: scale(1); }
                 }
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-5px); }
+                    75% { transform: translateX(5px); }
+                }
                 .field-success {
                     animation: pulse 0.3s ease-in-out;
                     border: 2px solid #4caf50 !important;
                     box-shadow: 0 0 8px rgba(76, 175, 80, 0.3) !important;
+                }
+                .validation-success {
+                    border-color: #4caf50 !important;
+                    box-shadow: 0 0 3px rgba(76, 175, 80, 0.2) !important;
+                    transition: all 0.3s ease;
+                }
+                .validation-error {
+                    border-color: #f44336 !important;
+                    box-shadow: 0 0 3px rgba(244, 67, 54, 0.2) !important;
+                    animation: shake 0.3s ease-in-out;
+                    transition: all 0.3s ease;
+                }
+                .validation-icon {
+                    transition: all 0.2s ease;
+                }
+                .validation-icon:hover {
+                    transform: translateY(-50%) scale(1.1);
+                }
+                .validation-tooltip {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.3;
+                }
+                .validation-tooltip::before {
+                    content: '';
+                    position: absolute;
+                    top: -4px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 0;
+                    height: 0;
+                    border-left: 4px solid transparent;
+                    border-right: 4px solid transparent;
+                    border-bottom: 4px solid #f44336;
                 }
             `;
             document.head.appendChild(style);
