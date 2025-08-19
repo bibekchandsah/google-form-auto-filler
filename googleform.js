@@ -11,54 +11,107 @@
 (function () {
     'use strict';
 
-    // Default configuration object with field mappings
-    let defaultFormData = {
-        'Roll No': '22054029',
-        'Full Name': 'Bibek Chand Sah',
-        'Name': 'Bibek Chand Sah',
-        'Stream': 'B.Tech',
-        'Branch': 'CSE',
-        'Gender': 'Male',
-        'Mail ID': 'bibeksha48@gmail.com',
-        'Mali ID': 'bibeksha48@gmail.com', // Handle typo in form
-        'Mobile No': '8235981727',
-        '10th %': '93.75',
-        '10t %': '93.75', // Handle typo in form
-        '10th YOP': '2020',
-        '12th/Diploma %': '91.25',
-        '12th/Diploma YOP': '2021',
-        'Graduation %': '83.65',
-        'YOP': '2026',
-        'Nationality': 'Nepalese',
-        'No. of Backlogs': '0' // Adding common field
-    };
-
-    // Load form data from localStorage or use defaults
-    let formData = loadFormData();
-
-    // Function to load form data from localStorage
-    function loadFormData() {
-        try {
-            const saved = localStorage.getItem('googleFormFillerData');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Merge with defaults to ensure we have all base fields
-                return { ...defaultFormData, ...parsed };
-            }
-        } catch (error) {
-            console.log('Error loading saved data:', error);
-        }
-        return { ...defaultFormData };
+    // Helper function to create field mappings from tag-to-fields format
+    function createFieldMappings(tagToFields) {
+        const mappings = {};
+        Object.entries(tagToFields).forEach(([tag, fields]) => {
+            fields.forEach(field => {
+                mappings[field] = tag;
+            });
+        });
+        return mappings;
     }
 
-    // Function to save form data to localStorage
-    function saveFormData(data) {
+    // Default configuration with tags and field mappings
+    let defaultTaggedData = {
+        // Tags with their values
+        tags: {
+            'ROLL_NUMBER': '22054029',
+            'FULL_NAME': 'Bibek Chand Sah',
+            'STREAM': 'B.Tech',
+            'BRANCH': 'CSE',
+            'GENDER': 'Male',
+            'EMAIL': 'bibeksha48@gmail.com',
+            'MOBILE': '8235981727',
+            'TENTH_PERCENTAGE': '93.75',
+            'TENTH_YOP': '2020',
+            'TWELFTH_PERCENTAGE': '91.25',
+            'TWELFTH_YOP': '2021',
+            'GRADUATION_PERCENTAGE': '83.65',
+            'GRADUATION_YOP': '2026',
+            'NATIONALITY': 'Nepalese',
+            'BACKLOGS': '0'
+        },
+        // Field mappings to tags - cleaner format with multiple fields per tag
+        fieldMappings: createFieldMappings({
+            'ROLL_NUMBER': ['Roll No'],
+            'FULL_NAME': ['Full Name', 'Name'],
+            'STREAM': ['Stream'],
+            'BRANCH': ['Branch'],
+            'GENDER': ['Gender'],
+            'EMAIL': ['Mail ID', 'Mali ID'],
+            'MOBILE': ['Mobile No'],
+            'TENTH_PERCENTAGE': ['10th %', '10t %'],
+            'TENTH_YOP': ['10th YOP'],
+            'TWELFTH_PERCENTAGE': ['12th/Diploma %'],
+            'TWELFTH_YOP': ['12th/Diploma YOP'],
+            'GRADUATION_PERCENTAGE': ['Graduation %'],
+            'GRADUATION_YOP': ['YOP'],
+            'NATIONALITY': ['Nationality'],
+            'BACKLOGS': ['No. of Backlogs']
+        })
+    };
+
+    // Load tagged data from localStorage or use defaults
+    let taggedData = loadTaggedData();
+
+    // Function to load tagged data from localStorage
+    function loadTaggedData() {
         try {
-            localStorage.setItem('googleFormFillerData', JSON.stringify(data));
-            console.log('✅ Form data saved to localStorage');
+            const saved = localStorage.getItem('googleFormFillerTaggedData');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Merge with defaults to ensure we have all base data
+                return {
+                    tags: { ...defaultTaggedData.tags, ...parsed.tags },
+                    fieldMappings: { ...defaultTaggedData.fieldMappings, ...parsed.fieldMappings }
+                };
+            }
         } catch (error) {
-            console.error('❌ Error saving form data:', error);
+            console.log('Error loading saved tagged data:', error);
         }
+        return JSON.parse(JSON.stringify(defaultTaggedData)); // Deep copy
+    }
+
+    // Function to save tagged data to localStorage
+    function saveTaggedData(data) {
+        try {
+            localStorage.setItem('googleFormFillerTaggedData', JSON.stringify(data));
+            console.log('✅ Tagged data saved to localStorage');
+        } catch (error) {
+            console.error('❌ Error saving tagged data:', error);
+        }
+    }
+
+    // Function to get value for a field using tag system
+    function getValueForField(titleText) {
+        // Clean the title text (remove asterisks, trim whitespace)
+        const cleanTitle = titleText.replace(/\s*\*\s*$/, '').trim();
+
+        // Check if we have a direct field mapping
+        const tagName = taggedData.fieldMappings[cleanTitle];
+        if (tagName && taggedData.tags[tagName]) {
+            return taggedData.tags[tagName];
+        }
+
+        // Check for case-insensitive field mapping
+        for (const [fieldName, tag] of Object.entries(taggedData.fieldMappings)) {
+            if (fieldName.toLowerCase() === cleanTitle.toLowerCase()) {
+                return taggedData.tags[tag] || null;
+            }
+        }
+
+        return null;
     }
 
     // Function to show customization modal
@@ -175,28 +228,102 @@
                 return fieldDiv;
             }
 
-            // Add default fields
-            Object.entries(formData).forEach(([key, value]) => {
-                // Skip duplicate entries (typo handlers)
-                if (key === 'Mali ID' || key === '10t %') return;
-
-                const isCustomField = !defaultFormData.hasOwnProperty(key);
-                const fieldRow = createFieldRow(key, value, isCustomField);
+            // Add tag fields (show tags, not individual field mappings)
+            Object.entries(taggedData.tags).forEach(([tagName, value]) => {
+                const isCustomField = !defaultTaggedData.tags.hasOwnProperty(tagName);
+                const fieldRow = createFieldRow(tagName, value, isCustomField);
                 form.appendChild(fieldRow);
             });
 
             modal.appendChild(form);
 
-            // Create "Add Custom Field" section
+            // Create "Add Custom Tag" section
             const addFieldSection = document.createElement('div');
             addFieldSection.style.cssText = 'margin-top: 16px; padding-top: 16px; border-top: 2px solid #eee;';
 
             const addFieldTitle = document.createElement('h3');
             addFieldTitle.style.cssText = 'margin: 0 0 12px 0; color: #333; font-size: 16px; text-align: center;';
-            addFieldTitle.textContent = '➕ Add Custom Field';
+            addFieldTitle.textContent = '🏷️ Add Custom Tag';
 
-            const addFieldContainer = document.createElement('div');
-            addFieldContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px;';
+            // Create two sections: Add New Tag and Map Field to Existing Tag
+
+            // Section 1: Add New Tag
+            const newTagSection = document.createElement('div');
+            newTagSection.style.cssText = 'margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px;';
+
+            const newTagLabel = document.createElement('h4');
+            newTagLabel.style.cssText = 'margin: 0 0 8px 0; color: #333; font-size: 14px;';
+            newTagLabel.textContent = '➕ Create New Tag';
+
+            const newTagContainer = document.createElement('div');
+            newTagContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center;';
+
+            // Tag name input
+            const tagNameInput = document.createElement('input');
+            tagNameInput.type = 'text';
+            tagNameInput.placeholder = 'Tag Name (e.g., "FATHER_NAME")';
+            tagNameInput.style.cssText = `
+                padding: 8px 12px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s;
+                text-transform: uppercase;
+            `;
+            tagNameInput.addEventListener('focus', () => tagNameInput.style.borderColor = '#4caf50');
+            tagNameInput.addEventListener('blur', () => tagNameInput.style.borderColor = '#ddd');
+            tagNameInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+            });
+
+            // Tag value input
+            const tagValueInput = document.createElement('input');
+            tagValueInput.type = 'text';
+            tagValueInput.placeholder = 'Tag Value (e.g., "John Doe")';
+            tagValueInput.style.cssText = `
+                padding: 8px 12px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s;
+            `;
+            tagValueInput.addEventListener('focus', () => tagValueInput.style.borderColor = '#4caf50');
+            tagValueInput.addEventListener('blur', () => tagValueInput.style.borderColor = '#ddd');
+
+            // Add new tag button
+            const addNewTagButton = document.createElement('button');
+            addNewTagButton.type = 'button';
+            addNewTagButton.textContent = '➕';
+            addNewTagButton.title = 'Add new tag';
+            addNewTagButton.style.cssText = `
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 10px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background 0.2s;
+            `;
+            addNewTagButton.addEventListener('mouseenter', () => addNewTagButton.style.background = '#45a049');
+            addNewTagButton.addEventListener('mouseleave', () => addNewTagButton.style.background = '#4caf50');
+
+            newTagContainer.appendChild(tagNameInput);
+            newTagContainer.appendChild(tagValueInput);
+            newTagContainer.appendChild(addNewTagButton);
+            newTagSection.appendChild(newTagLabel);
+            newTagSection.appendChild(newTagContainer);
+
+            // Section 2: Map Field to Existing Tag
+            const mapFieldSection = document.createElement('div');
+            mapFieldSection.style.cssText = 'padding: 12px; background: #e8f5e8; border-radius: 8px;';
+
+            const mapFieldLabel = document.createElement('h4');
+            mapFieldLabel.style.cssText = 'margin: 0 0 8px 0; color: #333; font-size: 14px;';
+            mapFieldLabel.textContent = '🔗 Map Field to Existing Tag';
+
+            const mapFieldContainer = document.createElement('div');
+            mapFieldContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center;';
 
             // Field name input
             const fieldNameInput = document.createElement('input');
@@ -212,19 +339,63 @@
             fieldNameInput.addEventListener('focus', () => fieldNameInput.style.borderColor = '#4caf50');
             fieldNameInput.addEventListener('blur', () => fieldNameInput.style.borderColor = '#ddd');
 
-            // Field value input
-            const fieldValueInput = document.createElement('input');
-            fieldValueInput.type = 'text';
-            fieldValueInput.placeholder = 'Field Value (e.g., "John Doe")';
-            fieldValueInput.style.cssText = `
+            // Tag selector dropdown
+            const tagSelector = document.createElement('select');
+            tagSelector.style.cssText = `
                 padding: 8px 12px;
                 border: 2px solid #ddd;
                 border-radius: 6px;
                 font-size: 14px;
                 transition: border-color 0.2s;
+                background: white;
             `;
-            fieldValueInput.addEventListener('focus', () => fieldValueInput.style.borderColor = '#4caf50');
-            fieldValueInput.addEventListener('blur', () => fieldValueInput.style.borderColor = '#ddd');
+            tagSelector.addEventListener('focus', () => tagSelector.style.borderColor = '#4caf50');
+            tagSelector.addEventListener('blur', () => tagSelector.style.borderColor = '#ddd');
+
+            // Populate tag selector
+            function updateTagSelector() {
+                // Clear existing options using DOM methods (safer than innerHTML)
+                while (tagSelector.firstChild) {
+                    tagSelector.removeChild(tagSelector.firstChild);
+                }
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select existing tag...';
+                tagSelector.appendChild(defaultOption);
+
+                Object.keys(taggedData.tags).forEach(tagName => {
+                    const option = document.createElement('option');
+                    option.value = tagName;
+                    option.textContent = `${tagName} (${taggedData.tags[tagName]})`;
+                    tagSelector.appendChild(option);
+                });
+            }
+            updateTagSelector();
+
+            // Add field mapping button
+            const addMappingButton = document.createElement('button');
+            addMappingButton.type = 'button';
+            addMappingButton.textContent = '🔗';
+            addMappingButton.title = 'Map field to tag';
+            addMappingButton.style.cssText = `
+                background: #2196f3;
+                color: white;
+                border: none;
+                padding: 10px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background 0.2s;
+            `;
+            addMappingButton.addEventListener('mouseenter', () => addMappingButton.style.background = '#1976d2');
+            addMappingButton.addEventListener('mouseleave', () => addMappingButton.style.background = '#2196f3');
+
+            mapFieldContainer.appendChild(fieldNameInput);
+            mapFieldContainer.appendChild(tagSelector);
+            mapFieldContainer.appendChild(addMappingButton);
+            mapFieldSection.appendChild(mapFieldLabel);
+            mapFieldSection.appendChild(mapFieldContainer);
 
             // Add button
             const addButton = document.createElement('button');
@@ -244,10 +415,52 @@
             addButton.addEventListener('mouseenter', () => addButton.style.background = '#45a049');
             addButton.addEventListener('mouseleave', () => addButton.style.background = '#4caf50');
 
-            // Add field functionality
-            function addCustomField() {
+            // Add new tag functionality
+            function addNewTag() {
+                const tagName = tagNameInput.value.trim();
+                const tagValue = tagValueInput.value.trim();
+
+                if (!tagName) {
+                    alert('Please enter a tag name!');
+                    tagNameInput.focus();
+                    return;
+                }
+
+                if (!tagValue) {
+                    alert('Please enter a tag value!');
+                    tagValueInput.focus();
+                    return;
+                }
+
+                // Check if tag already exists
+                if (taggedData.tags[tagName]) {
+                    alert('A tag with this name already exists! Use the mapping section below to assign fields to it.');
+                    tagNameInput.focus();
+                    return;
+                }
+
+                // Add the new tag
+                taggedData.tags[tagName] = tagValue;
+
+                // Create and add the new tag field to the form
+                const newFieldRow = createFieldRow(tagName, tagValue, true);
+                form.appendChild(newFieldRow);
+
+                // Update the tag selector dropdown
+                updateTagSelector();
+
+                // Clear inputs
+                tagNameInput.value = '';
+                tagValueInput.value = '';
+                tagNameInput.focus();
+
+                console.log(`✅ Added new tag: ${tagName} = ${tagValue}`);
+            }
+
+            // Add field mapping functionality
+            function addFieldMapping() {
                 const fieldName = fieldNameInput.value.trim();
-                const fieldValue = fieldValueInput.value.trim();
+                const selectedTag = tagSelector.value;
 
                 if (!fieldName) {
                     alert('Please enter a field name!');
@@ -255,52 +468,66 @@
                     return;
                 }
 
-                // Check if field already exists
-                const existingField = form.querySelector(`[data-field-key="${fieldName}"]`);
-                if (existingField) {
-                    alert('A field with this name already exists!');
-                    fieldNameInput.focus();
+                if (!selectedTag) {
+                    alert('Please select a tag to map to!');
+                    tagSelector.focus();
                     return;
                 }
 
-                // Create and add the new field
-                const newFieldRow = createFieldRow(fieldName, fieldValue, true);
-                form.appendChild(newFieldRow);
+                // Add the field mapping
+                taggedData.fieldMappings[fieldName] = selectedTag;
 
                 // Clear inputs
                 fieldNameInput.value = '';
-                fieldValueInput.value = '';
+                tagSelector.value = '';
                 fieldNameInput.focus();
+
+                // Show success message
+                const tagValue = taggedData.tags[selectedTag];
+                alert(`✅ Mapped "${fieldName}" to tag "${selectedTag}" (${tagValue})`);
+                console.log(`✅ Mapped field "${fieldName}" to tag "${selectedTag}"`);
             }
 
-            addButton.addEventListener('click', addCustomField);
+            addNewTagButton.addEventListener('click', addNewTag);
+            addMappingButton.addEventListener('click', addFieldMapping);
 
-            // Allow Enter key to add field
+            // Allow Enter key navigation
+            tagNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    tagValueInput.focus();
+                }
+            });
+
+            tagValueInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNewTag();
+                }
+            });
+
             fieldNameInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    fieldValueInput.focus();
+                    tagSelector.focus();
                 }
             });
 
-            fieldValueInput.addEventListener('keypress', (e) => {
+            tagSelector.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    addCustomField();
+                    addFieldMapping();
                 }
             });
 
-            addFieldContainer.appendChild(fieldNameInput);
-            addFieldContainer.appendChild(fieldValueInput);
-            addFieldContainer.appendChild(addButton);
-
             addFieldSection.appendChild(addFieldTitle);
-            addFieldSection.appendChild(addFieldContainer);
+            addFieldSection.appendChild(newTagSection);
+            addFieldSection.appendChild(mapFieldSection);
 
-            // Add tip for custom fields
+            // Add comprehensive tip
             const customFieldTip = document.createElement('div');
-            customFieldTip.style.cssText = 'text-align: center; font-size: 12px; color: #666; margin-top: 8px;';
-            customFieldTip.textContent = '💡 Custom fields are saved permanently in your browser';
+            customFieldTip.style.cssText = 'text-align: center; font-size: 12px; color: #666; margin-top: 12px; line-height: 1.4;';
+            customFieldTip.textContent = '💡 Tags are reusable values. Multiple field names can use the same tag. All data is saved permanently in your browser.';
 
             addFieldSection.appendChild(customFieldTip);
             modal.appendChild(addFieldSection);
@@ -359,35 +586,27 @@
 
             // Add event listeners (buttons already have references)
             saveButton.addEventListener('click', () => {
-                // Collect all form values
+                // Collect all tag values
                 const inputs = modal.querySelectorAll('input[data-key]');
-                const newFormData = {};
+                const newTags = {};
 
                 inputs.forEach(input => {
-                    const key = input.getAttribute('data-key');
+                    const tagName = input.getAttribute('data-key');
                     const value = input.value.trim();
-                    newFormData[key] = value;
-
-                    // Also update typo handlers
-                    if (key === 'Mail ID') {
-                        newFormData['Mali ID'] = value;
-                    }
-                    if (key === '10th %') {
-                        newFormData['10t %'] = value;
-                    }
+                    newTags[tagName] = value;
                 });
 
-                // Update global formData
-                formData = newFormData;
+                // Update global tagged data
+                taggedData.tags = { ...taggedData.tags, ...newTags };
 
                 // Save to localStorage
-                saveFormData(newFormData);
+                saveTaggedData(taggedData);
 
                 // Remove modal
                 document.body.removeChild(overlay);
 
                 // Show success message
-                console.log('✅ Form data updated and saved to localStorage!');
+                console.log('✅ Tagged data updated and saved to localStorage!');
 
                 // Resolve with success
                 resolve(true);
@@ -414,25 +633,7 @@
         });
     }
 
-    // Function to find field title and return the corresponding value
-    function getValueForField(titleText) {
-        // Clean the title text (remove asterisks, trim whitespace)
-        const cleanTitle = titleText.replace(/\s*\*\s*$/, '').trim();
 
-        // Check for exact matches first
-        if (formData[cleanTitle]) {
-            return formData[cleanTitle];
-        }
-
-        // Check for case-insensitive matches
-        for (const [key, value] of Object.entries(formData)) {
-            if (key.toLowerCase() === cleanTitle.toLowerCase()) {
-                return value;
-            }
-        }
-
-        return null;
-    }
 
     // Function to fill text inputs
     function fillTextInput(input, value) {
