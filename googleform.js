@@ -93,6 +93,46 @@
         }
     }
 
+    // Function to display current tag mappings in console
+    function showCurrentMappings() {
+        console.log('\n🏷️ CURRENT TAG MAPPINGS:');
+        console.log('========================');
+
+        // Group field mappings by tag
+        const tagToFields = {};
+        Object.entries(taggedData.fieldMappings).forEach(([fieldName, tagName]) => {
+            if (!tagToFields[tagName]) {
+                tagToFields[tagName] = [];
+            }
+            tagToFields[tagName].push(fieldName);
+        });
+
+        // Display each tag and its mapped fields
+        Object.entries(tagToFields).forEach(([tagName, fields]) => {
+            const tagValue = taggedData.tags[tagName] || 'No value set';
+            console.log(`\n🏷️ Tag: ${tagName}`);
+            console.log(`   Value: "${tagValue}"`);
+            console.log(`   Fields: ${fields.join(', ')}`);
+        });
+
+        // Show unmapped tags
+        const mappedTags = Object.values(taggedData.fieldMappings);
+        const unmappedTags = Object.keys(taggedData.tags).filter(tag => !mappedTags.includes(tag));
+
+        if (unmappedTags.length > 0) {
+            console.log('\n⚠️ UNMAPPED TAGS (have values but no field mappings):');
+            unmappedTags.forEach(tag => {
+                console.log(`   🏷️ ${tag}: "${taggedData.tags[tag]}"`);
+            });
+        }
+
+        console.log('\n💡 Use showCurrentMappings() to view this again');
+        console.log('💡 Use the customize button to modify mappings');
+    }
+
+    // Make function available globally for console access
+    window.showCurrentMappings = showCurrentMappings;
+
     // Function to get value for a field using tag system
     function getValueForField(titleText) {
         // Clean the title text (remove asterisks, trim whitespace)
@@ -358,7 +398,7 @@
                 while (tagSelector.firstChild) {
                     tagSelector.removeChild(tagSelector.firstChild);
                 }
-                
+
                 const defaultOption = document.createElement('option');
                 defaultOption.value = '';
                 defaultOption.textContent = 'Select existing tag...';
@@ -477,6 +517,9 @@
                 // Add the field mapping
                 taggedData.fieldMappings[fieldName] = selectedTag;
 
+                // Update the mappings display
+                updateMappingsDisplay();
+
                 // Clear inputs
                 fieldNameInput.value = '';
                 tagSelector.value = '';
@@ -520,9 +563,72 @@
                 }
             });
 
+            // Section 3: View Current Mappings
+            const viewMappingsSection = document.createElement('div');
+            viewMappingsSection.style.cssText = 'margin-top: 16px; padding: 12px; background: #fff3e0; border-radius: 8px; border: 1px solid #ffcc02;';
+
+            const viewMappingsLabel = document.createElement('h4');
+            viewMappingsLabel.style.cssText = 'margin: 0 0 8px 0; color: #333; font-size: 14px;';
+            viewMappingsLabel.textContent = '📋 Current Field Mappings';
+
+            const mappingsContainer = document.createElement('div');
+            mappingsContainer.style.cssText = 'max-height: 200px; overflow-y: auto; font-size: 12px;';
+
+            // Function to update mappings display
+            function updateMappingsDisplay() {
+                // Clear existing content
+                while (mappingsContainer.firstChild) {
+                    mappingsContainer.removeChild(mappingsContainer.firstChild);
+                }
+
+                // Group field mappings by tag
+                const tagToFields = {};
+                Object.entries(taggedData.fieldMappings).forEach(([fieldName, tagName]) => {
+                    if (!tagToFields[tagName]) {
+                        tagToFields[tagName] = [];
+                    }
+                    tagToFields[tagName].push(fieldName);
+                });
+
+                // Display each tag and its mapped fields
+                Object.entries(tagToFields).forEach(([tagName, fields]) => {
+                    const tagValue = taggedData.tags[tagName] || 'No value set';
+
+                    const mappingRow = document.createElement('div');
+                    mappingRow.style.cssText = 'margin-bottom: 8px; padding: 8px; background: white; border-radius: 4px; border-left: 4px solid #4caf50;';
+
+                    const tagInfo = document.createElement('div');
+                    tagInfo.style.cssText = 'font-weight: bold; color: #2e7d32; margin-bottom: 4px;';
+                    tagInfo.textContent = `🏷️ ${tagName}: "${tagValue}"`;
+
+                    const fieldsInfo = document.createElement('div');
+                    fieldsInfo.style.cssText = 'color: #666; font-size: 11px; margin-left: 16px;';
+                    fieldsInfo.textContent = `📝 Fields: ${fields.join(', ')}`;
+
+                    mappingRow.appendChild(tagInfo);
+                    mappingRow.appendChild(fieldsInfo);
+                    mappingsContainer.appendChild(mappingRow);
+                });
+
+                // Show message if no mappings exist
+                if (Object.keys(tagToFields).length === 0) {
+                    const noMappings = document.createElement('div');
+                    noMappings.style.cssText = 'text-align: center; color: #999; font-style: italic; padding: 16px;';
+                    noMappings.textContent = 'No field mappings configured yet';
+                    mappingsContainer.appendChild(noMappings);
+                }
+            }
+
+            // Initial display
+            updateMappingsDisplay();
+
+            viewMappingsSection.appendChild(viewMappingsLabel);
+            viewMappingsSection.appendChild(mappingsContainer);
+
             addFieldSection.appendChild(addFieldTitle);
             addFieldSection.appendChild(newTagSection);
             addFieldSection.appendChild(mapFieldSection);
+            addFieldSection.appendChild(viewMappingsSection);
 
             // Add comprehensive tip
             const customFieldTip = document.createElement('div');
@@ -791,12 +897,12 @@
         }
     }
 
-    // Function to add a fill button to the form
+    // Function to add buttons to the form
     function addFillButton() {
-        // Check if button already exists
+        // Check if buttons already exist
         if (document.getElementById('auto-fill-btn')) return;
 
-        // Create the button
+        // Create the main fill button
         const button = document.createElement('button');
         button.id = 'auto-fill-btn';
         button.textContent = '🚀 Fill Form (Manual Dropdowns)';
@@ -855,8 +961,46 @@ Ready to start filling the form?
             }
         });
 
-        // Add button to page
+        // Create the view mappings button
+        const viewButton = document.createElement('button');
+        viewButton.id = 'view-mappings-btn';
+        viewButton.textContent = '📋 View Mappings';
+        viewButton.style.cssText = `
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 9999;
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        `;
+
+        // Add hover effect for view button
+        viewButton.addEventListener('mouseenter', () => {
+            viewButton.style.background = '#f57c00';
+        });
+
+        viewButton.addEventListener('mouseleave', () => {
+            viewButton.style.background = '#ff9800';
+        });
+
+        // Add click handler for view button
+        viewButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showCurrentMappings();
+            alert('📋 Current mappings displayed in console! Press F12 to view.');
+        });
+
+        // Add buttons to page
         document.body.appendChild(button);
+        document.body.appendChild(viewButton);
     }
 
     // Wait for the page to load completely
@@ -868,6 +1012,12 @@ Ready to start filling the form?
         // setTimeout(fillForm, 2000);
 
         console.log('🚀 Google Form Auto Filler loaded! Click the button to auto-fill text fields and highlight dropdown options.');
+        console.log('📋 Type showCurrentMappings() in console to view your current tag mappings.');
+
+        // Show a quick summary of available tags
+        const tagCount = Object.keys(taggedData.tags).length;
+        const mappingCount = Object.keys(taggedData.fieldMappings).length;
+        console.log(`🏷️ You have ${tagCount} tags and ${mappingCount} field mappings configured.`);
     }
 
     // Initialize when DOM is ready
