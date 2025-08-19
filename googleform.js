@@ -64,7 +64,7 @@
 
     // Load tagged data from localStorage or use defaults
     let taggedData = loadTaggedData();
-    
+
     // Track modal state for toggle functionality
     let isCustomizationModalOpen = false;
 
@@ -135,9 +135,9 @@
 
     // Make functions available globally for console access
     window.showCurrentMappings = showCurrentMappings;
-    
+
     // Global function to close customization modal (for keyboard shortcuts)
-    window.closeCustomizationModal = function() {
+    window.closeCustomizationModal = function () {
         if (isCustomizationModalOpen) {
             // Find and close the modal
             const overlay = document.querySelector('#form-filler-modal-overlay');
@@ -150,6 +150,195 @@
         }
         return false;
     };
+
+    // Progress indicator and success animation functions
+    function createProgressIndicator() {
+        // Remove existing progress indicator if any
+        const existing = document.getElementById('form-filler-progress');
+        if (existing) {
+            existing.remove();
+        }
+
+        // Create progress container
+        const progressContainer = document.createElement('div');
+        progressContainer.id = 'form-filler-progress';
+        progressContainer.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10001;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 300px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        `;
+
+        // Create title
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size: 18px; font-weight: bold; color: #333; margin-bottom: 16px;';
+        title.textContent = '🚀 Filling Form...';
+
+        // Create progress bar container
+        const progressBarContainer = document.createElement('div');
+        progressBarContainer.style.cssText = `
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        `;
+
+        // Create progress bar
+        const progressBar = document.createElement('div');
+        progressBar.id = 'form-filler-progress-bar';
+        progressBar.style.cssText = `
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        `;
+
+        // Create status text
+        const statusText = document.createElement('div');
+        statusText.id = 'form-filler-status';
+        statusText.style.cssText = 'font-size: 14px; color: #666; margin-bottom: 8px;';
+        statusText.textContent = 'Initializing...';
+
+        // Create field counter
+        const fieldCounter = document.createElement('div');
+        fieldCounter.id = 'form-filler-counter';
+        fieldCounter.style.cssText = 'font-size: 12px; color: #999;';
+        fieldCounter.textContent = '0 / 0 fields processed';
+
+        progressBarContainer.appendChild(progressBar);
+        progressContainer.appendChild(title);
+        progressContainer.appendChild(progressBarContainer);
+        progressContainer.appendChild(statusText);
+        progressContainer.appendChild(fieldCounter);
+
+        document.body.appendChild(progressContainer);
+
+        return {
+            container: progressContainer,
+            bar: progressBar,
+            status: statusText,
+            counter: fieldCounter,
+            title: title
+        };
+    }
+
+    function updateProgress(current, total, fieldName, success) {
+        const progressBar = document.getElementById('form-filler-progress-bar');
+        const statusText = document.getElementById('form-filler-status');
+        const fieldCounter = document.getElementById('form-filler-counter');
+
+        if (progressBar && statusText && fieldCounter) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            progressBar.style.width = `${percentage}%`;
+
+            if (success) {
+                statusText.textContent = `✅ Filled: ${fieldName}`;
+                statusText.style.color = '#4caf50';
+            } else {
+                statusText.textContent = `⚠️ Skipped: ${fieldName}`;
+                statusText.style.color = '#ff9800';
+            }
+
+            fieldCounter.textContent = `${current} / ${total} fields processed`;
+
+            // Add pulse animation for successful fills
+            if (success) {
+                progressBar.style.boxShadow = '0 0 10px #4caf50';
+                setTimeout(() => {
+                    progressBar.style.boxShadow = 'none';
+                }, 300);
+            }
+        }
+    }
+
+    function showSuccessAnimation(filledCount, totalCount, skippedCount) {
+        const progressContainer = document.getElementById('form-filler-progress');
+        if (!progressContainer) return;
+
+        // Update to success state
+        const title = progressContainer.querySelector('div');
+        const statusText = document.getElementById('form-filler-status');
+        const progressBar = document.getElementById('form-filler-progress-bar');
+
+        title.textContent = '🎉 Form Filling Complete!';
+        title.style.color = '#4caf50';
+
+        statusText.textContent = `✅ Successfully filled ${filledCount} fields`;
+        statusText.style.color = '#4caf50';
+        statusText.style.fontWeight = 'bold';
+
+        progressBar.style.background = 'linear-gradient(90deg, #4caf50, #66bb6a)';
+        progressBar.style.boxShadow = '0 0 20px #4caf50';
+
+        // Add success animation
+        progressContainer.style.animation = 'successPulse 0.6s ease-in-out';
+
+        // Add CSS animation if not already added
+        if (!document.getElementById('success-animation-styles')) {
+            const style = document.createElement('style');
+            style.id = 'success-animation-styles';
+            style.textContent = `
+                @keyframes successPulse {
+                    0% { transform: translate(-50%, -50%) scale(1); }
+                    50% { transform: translate(-50%, -50%) scale(1.05); }
+                    100% { transform: translate(-50%, -50%) scale(1); }
+                }
+                @keyframes fadeOut {
+                    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Show detailed results
+        setTimeout(() => {
+            const resultText = document.createElement('div');
+            resultText.style.cssText = 'font-size: 12px; color: #666; margin-top: 8px; line-height: 1.4;';
+            resultText.innerHTML = `
+                📊 <strong>Results:</strong><br>
+                ✅ Filled: ${filledCount} fields<br>
+                ${skippedCount > 0 ? `⚠️ Skipped: ${skippedCount} fields<br>` : ''}
+                🎯 Total: ${totalCount} fields found
+            `;
+            progressContainer.appendChild(resultText);
+        }, 500);
+
+        // Auto-hide after 4 seconds with fade out animation
+        setTimeout(() => {
+            progressContainer.style.animation = 'fadeOut 0.5s ease-in-out forwards';
+            setTimeout(() => {
+                if (progressContainer.parentNode) {
+                    progressContainer.parentNode.removeChild(progressContainer);
+                }
+            }, 500);
+        }, 4000);
+    }
+
+    function hideProgressIndicator() {
+        const progressContainer = document.getElementById('form-filler-progress');
+        if (progressContainer) {
+            progressContainer.style.animation = 'fadeOut 0.5s ease-in-out forwards';
+            setTimeout(() => {
+                if (progressContainer.parentNode) {
+                    progressContainer.parentNode.removeChild(progressContainer);
+                }
+            }, 500);
+        }
+    }
 
     // Function to get value for a field using tag system
     function getValueForField(titleText) {
@@ -727,7 +916,7 @@
             modal.appendChild(tip);
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
-            
+
             // Mark modal as open
             isCustomizationModalOpen = true;
 
@@ -763,7 +952,7 @@
             // Add event listeners for save only button
             saveOnlyButton.addEventListener('click', () => {
                 collectAndSaveData();
-                
+
                 // Close modal
                 closeModal();
 
@@ -777,7 +966,7 @@
             // Add event listeners for save and fill button
             saveAndFillButton.addEventListener('click', () => {
                 collectAndSaveData();
-                
+
                 // Close modal
                 closeModal();
 
@@ -916,52 +1105,391 @@
         });
     }
 
-    // Function to process all form fields
+    // Function to create progress indicator
+    function createProgressIndicator() {
+        // Remove existing progress indicator if any
+        const existing = document.getElementById('form-filler-progress');
+        if (existing) existing.remove();
+
+        // Create progress container
+        const progressContainer = document.createElement('div');
+        progressContainer.id = 'form-filler-progress';
+        progressContainer.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10001;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            min-width: 400px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        `;
+
+        // Create title
+        const title = document.createElement('h3');
+        title.style.cssText = 'margin: 0 0 16px 0; color: #333; font-size: 18px;';
+        title.textContent = '🚀 Filling Google Form...';
+
+        // Create progress bar container
+        const progressBarContainer = document.createElement('div');
+        progressBarContainer.style.cssText = `
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 16px 0;
+        `;
+
+        // Create progress bar
+        const progressBar = document.createElement('div');
+        progressBar.id = 'form-filler-progress-bar';
+        progressBar.style.cssText = `
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        `;
+
+        progressBarContainer.appendChild(progressBar);
+
+        // Create status text
+        const statusText = document.createElement('div');
+        statusText.id = 'form-filler-status';
+        statusText.style.cssText = 'color: #666; font-size: 14px; margin-top: 12px;';
+        statusText.textContent = 'Initializing...';
+
+        // Create field counter
+        const fieldCounter = document.createElement('div');
+        fieldCounter.id = 'form-filler-counter';
+        fieldCounter.style.cssText = 'color: #999; font-size: 12px; margin-top: 8px;';
+        fieldCounter.textContent = '0 / 0 fields processed';
+
+        progressContainer.appendChild(title);
+        progressContainer.appendChild(progressBarContainer);
+        progressContainer.appendChild(statusText);
+        progressContainer.appendChild(fieldCounter);
+
+        document.body.appendChild(progressContainer);
+
+        return {
+            container: progressContainer,
+            bar: progressBar,
+            status: statusText,
+            counter: fieldCounter,
+            title: title
+        };
+    }
+
+    // Function to update progress
+    function updateProgress(current, total, fieldName, success) {
+        const progressBar = document.getElementById('form-filler-progress-bar');
+        const statusText = document.getElementById('form-filler-status');
+        const counterText = document.getElementById('form-filler-counter');
+
+        if (progressBar && statusText && counterText) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            progressBar.style.width = `${percentage}%`;
+
+            if (fieldName) {
+                const icon = success ? '✅' : '⚠️';
+                statusText.textContent = `${icon} ${fieldName}`;
+            }
+
+            counterText.textContent = `${current} / ${total} fields processed`;
+        }
+    }
+
+    // Function to show success animation
+    function showSuccessAnimation(filledCount, totalCount, skippedCount) {
+        const progressContainer = document.getElementById('form-filler-progress');
+        if (!progressContainer) return;
+
+        // Update to success state
+        const title = progressContainer.querySelector('h3');
+        const statusText = document.getElementById('form-filler-status');
+        const progressBar = document.getElementById('form-filler-progress-bar');
+
+        // Success animation
+        title.textContent = '🎉 Form Filling Complete!';
+        title.style.color = '#4caf50';
+
+        progressBar.style.background = 'linear-gradient(90deg, #4caf50, #66bb6a)';
+        progressBar.style.width = '100%';
+
+        // Create success summary
+        const summary = document.createElement('div');
+        summary.style.cssText = `
+            margin-top: 16px;
+            padding: 12px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        `;
+
+        // Create summary title using DOM methods (safer than innerHTML)
+        const summaryTitle = document.createElement('div');
+        summaryTitle.style.cssText = 'font-weight: bold; color: #2e7d32; margin-bottom: 8px;';
+        summaryTitle.textContent = '📊 Summary:';
+
+        // Create summary content
+        const summaryContent = document.createElement('div');
+        summaryContent.style.cssText = 'font-size: 14px; color: #333;';
+
+        // Create individual lines
+        const filledLine = document.createElement('div');
+        filledLine.style.cssText = 'margin-bottom: 4px;';
+        filledLine.textContent = `✅ ${filledCount} fields filled successfully`;
+
+        const skippedLine = document.createElement('div');
+        skippedLine.style.cssText = 'margin-bottom: 4px;';
+        skippedLine.textContent = `⚠️ ${skippedCount} fields skipped (no data)`;
+
+        const totalLine = document.createElement('div');
+        totalLine.textContent = `📝 ${totalCount} total fields processed`;
+
+        // Append all elements using DOM methods
+        summaryContent.appendChild(filledLine);
+        summaryContent.appendChild(skippedLine);
+        summaryContent.appendChild(totalLine);
+
+        summary.appendChild(summaryTitle);
+        summary.appendChild(summaryContent);
+
+        statusText.replaceWith(summary);
+
+        // Add celebration effect
+        progressContainer.style.animation = 'bounce 0.6s ease-in-out';
+
+        // Add CSS animation if not exists
+        if (!document.getElementById('form-filler-animations')) {
+            const style = document.createElement('style');
+            style.id = 'form-filler-animations';
+            style.textContent = `
+                @keyframes bounce {
+                    0%, 20%, 50%, 80%, 100% { transform: translate(-50%, -50%) translateY(0); }
+                    40% { transform: translate(-50%, -50%) translateY(-10px); }
+                    60% { transform: translate(-50%, -50%) translateY(-5px); }
+                }
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+                .field-success {
+                    animation: pulse 0.3s ease-in-out;
+                    border: 2px solid #4caf50 !important;
+                    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3) !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Smart auto-close with hover detection
+        let autoCloseTimer = null;
+        let isHovering = false;
+
+        // Function to start auto-close timer
+        function startAutoCloseTimer() {
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+            }
+
+            autoCloseTimer = setTimeout(() => {
+                if (!isHovering && progressContainer && document.body.contains(progressContainer)) {
+                    console.log('🎉 Auto-closing success summary (no hover detected)');
+                    closeSuccessSummary();
+                }
+            }, 3000);
+        }
+
+        // Function to close the success summary
+        function closeSuccessSummary() {
+            if (progressContainer && document.body.contains(progressContainer)) {
+                progressContainer.style.opacity = '0';
+                progressContainer.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                progressContainer.style.transition = 'all 0.3s ease';
+
+                setTimeout(() => {
+                    if (document.body.contains(progressContainer)) {
+                        document.body.removeChild(progressContainer);
+                    }
+                }, 300);
+            }
+        }
+
+        // Add hover event listeners
+        progressContainer.addEventListener('mouseenter', () => {
+            isHovering = true;
+            console.log('🎯 Mouse entered success summary - pausing auto-close');
+
+            // Clear the auto-close timer
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+                autoCloseTimer = null;
+            }
+
+            // Add visual feedback for hover state
+            progressContainer.style.boxShadow = '0 12px 40px rgba(0,0,0,0.4)';
+            progressContainer.style.transform = 'translate(-50%, -50%) scale(1.02)';
+        });
+
+        progressContainer.addEventListener('mouseleave', () => {
+            isHovering = false;
+            console.log('🎯 Mouse left success summary - resuming auto-close in 3 seconds');
+
+            // Remove hover visual feedback
+            progressContainer.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)';
+            progressContainer.style.transform = 'translate(-50%, -50%) scale(1)';
+
+            // Restart auto-close timer
+            startAutoCloseTimer();
+        });
+
+        // Add manual close button for better UX
+        const closeButton = document.createElement('button');
+        closeButton.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        `;
+        closeButton.textContent = '×';
+        closeButton.title = 'Close summary';
+
+        closeButton.addEventListener('mouseenter', () => {
+            closeButton.style.background = '#da190b';
+            closeButton.style.transform = 'scale(1.1)';
+        });
+
+        closeButton.addEventListener('mouseleave', () => {
+            closeButton.style.background = '#f44336';
+            closeButton.style.transform = 'scale(1)';
+        });
+
+        closeButton.addEventListener('click', () => {
+            console.log('🎯 Manual close button clicked');
+            closeSuccessSummary();
+        });
+
+        progressContainer.appendChild(closeButton);
+
+        // Start the initial auto-close timer
+        startAutoCloseTimer();
+    }
+
+    // Function to add field success animation
+    function animateFieldSuccess(element) {
+        if (element) {
+            element.classList.add('field-success');
+            setTimeout(() => {
+                element.classList.remove('field-success');
+            }, 600);
+        }
+    }
+
+    // Function to process all form fields with progress tracking
     async function fillForm() {
-        console.log('Starting Google Form auto-fill...');
+        console.log('🚀 Starting Google Form auto-fill with progress tracking...');
+
+        // Create progress indicator
+        const progress = createProgressIndicator();
 
         // Find all question containers
         const questionContainers = document.querySelectorAll('.Qr7Oae');
+        const totalFields = questionContainers.length;
+        let processedFields = 0;
+        let filledFields = 0;
+        let skippedFields = 0;
+
+        // Update initial state
+        updateProgress(0, totalFields, 'Scanning form fields...', true);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for UX
 
         for (let index = 0; index < questionContainers.length; index++) {
             const container = questionContainers[index];
             try {
                 // Find the title element
                 const titleElement = container.querySelector('.M7eMe');
-                if (!titleElement) continue;
+                if (!titleElement) {
+                    processedFields++;
+                    updateProgress(processedFields, totalFields, 'Skipping invalid field', false);
+                    continue;
+                }
 
                 const titleText = titleElement.textContent.trim();
                 const value = getValueForField(titleText);
 
+                processedFields++;
+
                 if (!value) {
                     console.log(`No value found for field: "${titleText}"`);
+                    skippedFields++;
+                    updateProgress(processedFields, totalFields, `Skipped: ${titleText}`, false);
+                    await new Promise(resolve => setTimeout(resolve, 200)); // Brief pause
                     continue;
                 }
 
                 console.log(`Processing field: "${titleText}" with value: "${value}"`);
+                updateProgress(processedFields, totalFields, `Filling: ${titleText}`, true);
+
+                let success = false;
 
                 // Check if it's a text input field
                 const textInput = container.querySelector('input.whsOnd.zHQkBf');
                 if (textInput) {
-                    const success = fillTextInput(textInput, value);
+                    success = fillTextInput(textInput, value);
+                    if (success) {
+                        animateFieldSuccess(textInput);
+                        filledFields++;
+                    }
                     console.log(`Text input filled for "${titleText}": ${success}`);
-                    continue;
                 }
-
                 // Check if it's a dropdown field
-                const dropdownContainer = container.querySelector('.vQES8d');
-                if (dropdownContainer) {
-                    const success = await selectDropdownOption(dropdownContainer, value);
-                    console.log(`Dropdown option selected for "${titleText}": ${success}`);
-                    continue;
+                else {
+                    const dropdownContainer = container.querySelector('.vQES8d');
+                    if (dropdownContainer) {
+                        success = await selectDropdownOption(dropdownContainer, value);
+                        if (success) {
+                            animateFieldSuccess(dropdownContainer);
+                            filledFields++;
+                        }
+                        console.log(`Dropdown option selected for "${titleText}": ${success}`);
+                    } else {
+                        console.log(`Unknown field type for: "${titleText}"`);
+                        skippedFields++;
+                    }
                 }
 
-                console.log(`Unknown field type for: "${titleText}"`);
+                // Brief pause between fields for better UX
+                await new Promise(resolve => setTimeout(resolve, 300));
 
             } catch (error) {
                 console.error(`Error processing field ${index}:`, error);
+                skippedFields++;
+                updateProgress(processedFields, totalFields, `Error in field ${index}`, false);
             }
         }
+
+        // Show completion animation
+        console.log(`✅ Form filling complete! Filled: ${filledFields}, Skipped: ${skippedFields}, Total: ${totalFields}`);
+        showSuccessAnimation(filledFields, totalFields, skippedFields);
     }
 
     // Function to add floating icon with menu
@@ -1034,7 +1562,7 @@
                     hideMenu();
                     // Show customization modal and handle the result
                     const shouldFillForm = await showCustomizationModal();
-                    
+
                     if (shouldFillForm) {
                         // User clicked "Fill Form" - show instructions and fill
                         const instructions = `
@@ -1108,7 +1636,7 @@ Alt+M: View Mappings
 • Alt+M shows your current tag mappings in console
 • All shortcuts work anywhere on the Google Forms page
 • Shortcuts override browser defaults for better functionality`;
-                    
+
                     alert(shortcutsInfo);
                     console.log('🎹 Keyboard shortcuts enabled:');
                     console.log('   Alt+F: Quick Fill Form (with saved data)');
@@ -1208,9 +1736,9 @@ Alt+M: View Mappings
                 // Prevent default browser behavior (like opening File menu)
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 console.log('🎹 Keyboard shortcut Alt+F triggered - Quick Fill Form');
-                
+
                 // Quick fill form with saved data (same as "Fill Form (Saved Data)" menu option)
                 const instructions = `
 🎹 KEYBOARD SHORTCUT ACTIVATED (Alt+F)
@@ -1234,19 +1762,19 @@ Ready to start filling the form?
                     console.log('🎹 Quick fill cancelled by user');
                 }
             }
-            
+
             // Check for Alt + C for Customize Data (Toggle)
             else if (e.altKey && (e.key === 'c' || e.key === 'C')) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // Toggle modal - close if open, open if closed
                 if (isCustomizationModalOpen) {
                     console.log('🎹 Keyboard shortcut Alt+C triggered - Closing Customize Data');
                     window.closeCustomizationModal();
                 } else {
                     console.log('🎹 Keyboard shortcut Alt+C triggered - Opening Customize Data');
-                    
+
                     // Open customization modal
                     showCustomizationModal().then(shouldFillForm => {
                         if (shouldFillForm) {
@@ -1273,18 +1801,18 @@ Ready to start filling the form?
                     });
                 }
             }
-            
+
             // Check for Alt + M for View Mappings
             else if (e.altKey && (e.key === 'm' || e.key === 'M')) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 console.log('🎹 Keyboard shortcut Alt+M triggered - View Mappings');
                 showCurrentMappings();
                 alert('📋 Current mappings displayed in console! Press F12 to view.\n\n🎹 Triggered by Alt+M shortcut');
             }
         });
-        
+
         console.log('🎹 Keyboard shortcuts enabled:');
         console.log('   Alt+F: Quick Fill Form (with saved data)');
         console.log('   Alt+C: Customize Data');
@@ -1295,7 +1823,7 @@ Ready to start filling the form?
     function init() {
         // Add the fill button
         addFillButton();
-        
+
         // Setup keyboard shortcuts
         setupKeyboardShortcuts();
 
