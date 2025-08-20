@@ -1,11 +1,13 @@
 // ==UserScript==
-// @name         Google Form Auto Filler
+// @name         Google Form Auto Filler with custom details
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Automatically fill Google Forms with predefined data
-// @author       You
+// @author       Bibek Chand Sah
+// @icon         https://ssl.gstatic.com/docs/forms/device_home/android_192.png
 // @match        https://docs.google.com/forms/*
 // @grant        none
+// @license      MIT
 // ==/UserScript==
 
 (function () {
@@ -26,18 +28,18 @@
     let defaultTaggedData = {
         // Tags with their values
         tags: {
-            'ROLL_NUMBER': '22054029',
-            'FULL_NAME': 'Bibek Chand Sah',
+            'ROLL_NUMBER': '22054',
+            'FULL_NAME': 'Your_name_here',
             'STREAM': 'B.Tech',
             'BRANCH': 'CSE',
             'GENDER': 'Male',
-            'EMAIL': 'bibeksha48@gmail.com',
-            'MOBILE': '8235981727',
+            'EMAIL': '@gmail.com',
+            'MOBILE': 'Your_no_here',
             'TENTH_PERCENTAGE': '93.75',
             'TENTH_YOP': '2020',
-            'TWELFTH_PERCENTAGE': '91.25',
+            'TWELFTH_PERCENTAGE': '93.25',
             'TWELFTH_YOP': '2021',
-            'GRADUATION_PERCENTAGE': '83.65',
+            'GRADUATION_PERCENTAGE': '93.65',
             'GRADUATION_YOP': '2026',
             'NATIONALITY': 'Nepalese',
             'BACKLOGS': '0',
@@ -48,24 +50,24 @@
         },
         // Field mappings to tags - cleaner format with multiple fields per tag
         fieldMappings: createFieldMappings({
-            'ROLL_NUMBER': ['Roll No'],
-            'FULL_NAME': ['Full Name', 'Name'],
+            'ROLL_NUMBER': ['Roll No', 'Roll'],
+            'FULL_NAME': ['Full Name', 'Name', 'Aadhar Name'],
             'STREAM': ['Stream'],
             'BRANCH': ['Branch'],
             'GENDER': ['Gender'],
-            'EMAIL': ['Mail ID', 'Mali ID'],
-            'MOBILE': ['Mobile No'],
-            'TENTH_PERCENTAGE': ['10th %', '10t %'],
+            'EMAIL': ['Mail ID', 'Email'],
+            'MOBILE': ['Mobile No', 'Phone number'],
+            'TENTH_PERCENTAGE': ['10th %', '10t %', '10th Percentage'],
             'TENTH_YOP': ['10th YOP'],
-            'TWELFTH_PERCENTAGE': ['12th/Diploma %'],
+            'TWELFTH_PERCENTAGE': ['12th/Diploma %', '12th Percentage'],
             'TWELFTH_YOP': ['12th/Diploma YOP'],
             'GRADUATION_PERCENTAGE': ['Graduation %'],
             'GRADUATION_YOP': ['YOP'],
             'NATIONALITY': ['Nationality'],
-            'BACKLOGS': ['No. of Backlogs'],
+            'BACKLOGS': ['No. of Backlogs','Backlogs'],
             'DATE_OF_BIRTH': ['Date of Birth', 'Birth Date', 'DOB'],
-            'BIRTH_DATE': ['Birth Date', 'Date of Birth'],
-            'DOB': ['DOB', 'Date of Birth'],
+            'BIRTH_DATE': ['Birth Date', 'Date of Birth', 'DOB'],
+            'DOB': ['DOB', 'Date of Birth', 'Birth Date'],
             'GRADUATION_DATE': ['Graduation Date', 'Expected Graduation']
         })
     };
@@ -1739,6 +1741,117 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
         }
     }
 
+    // Function to generate automatic field mappings based on tag name
+    function generateAutoFieldMappings(tagName) {
+        const mappings = [];
+
+        // Convert tag name to potential field names
+        const cleanTagName = tagName.replace(/_/g, ' ').toLowerCase();
+
+        // Generate variations of the tag name
+        const variations = [
+            // Original tag name as-is
+            tagName,
+
+            // Replace underscores with spaces
+            tagName.replace(/_/g, ' '),
+
+            // Title case version
+            cleanTagName.split(' ').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' '),
+
+            // All lowercase with spaces
+            cleanTagName,
+
+            // All uppercase with spaces
+            cleanTagName.toUpperCase(),
+
+            // Camel case version
+            cleanTagName.split(' ').map((word, index) =>
+                index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' '),
+        ];
+
+        // Add common variations based on tag patterns
+        if (tagName.includes('COURSE')) {
+            variations.push('Course', 'Preferred Course', 'Course Name', 'Course Selection');
+        }
+
+        if (tagName.includes('SUBJECT')) {
+            variations.push('Subject', 'Subject Name', 'Preferred Subject');
+        }
+
+        if (tagName.includes('DEPARTMENT')) {
+            variations.push('Department', 'Dept', 'Department Name');
+        }
+
+        if (tagName.includes('COLLEGE')) {
+            variations.push('College', 'College Name', 'Institution');
+        }
+
+        if (tagName.includes('UNIVERSITY')) {
+            variations.push('University', 'University Name');
+        }
+
+        if (tagName.includes('ADDRESS')) {
+            variations.push('Address', 'Home Address', 'Permanent Address', 'Current Address');
+        }
+
+        if (tagName.includes('CITY')) {
+            variations.push('City', 'City Name', 'Home City');
+        }
+
+        if (tagName.includes('STATE')) {
+            variations.push('State', 'State Name', 'Home State');
+        }
+
+        if (tagName.includes('COUNTRY')) {
+            variations.push('Country', 'Country Name', 'Home Country');
+        }
+
+        if (tagName.includes('FATHER')) {
+            variations.push('Father Name', 'Father\'s Name', 'Father');
+        }
+
+        if (tagName.includes('MOTHER')) {
+            variations.push('Mother Name', 'Mother\'s Name', 'Mother');
+        }
+
+        if (tagName.includes('GUARDIAN')) {
+            variations.push('Guardian Name', 'Guardian\'s Name', 'Guardian');
+        }
+
+        if (tagName.includes('HOBBY') || tagName.includes('HOBBIES')) {
+            variations.push('Hobbies', 'Hobby', 'Interests', 'Interest');
+        }
+
+        if (tagName.includes('SKILL') || tagName.includes('SKILLS')) {
+            variations.push('Skills', 'Skill', 'Technical Skills', 'Key Skills');
+        }
+
+        if (tagName.includes('EXPERIENCE')) {
+            variations.push('Experience', 'Work Experience', 'Previous Experience');
+        }
+
+        if (tagName.includes('QUALIFICATION')) {
+            variations.push('Qualification', 'Qualifications', 'Educational Qualification');
+        }
+
+        // Remove duplicates and empty values
+        const uniqueVariations = [...new Set(variations)].filter(v => v && v.trim());
+
+        // Add all unique variations as potential field mappings
+        uniqueVariations.forEach(variation => {
+            if (variation !== tagName) { // Don't map to itself
+                mappings.push(variation);
+            }
+        });
+
+        console.log(`🔗 Generated ${mappings.length} auto-mappings for tag "${tagName}":`, mappings);
+        return mappings;
+    }
+
     // Function to get value for a field using tag system
     function getValueForField(titleText) {
         // Clean the title text (remove asterisks, trim whitespace)
@@ -1898,7 +2011,46 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                     deleteBtn.addEventListener('mouseenter', () => deleteBtn.style.background = '#da190b');
                     deleteBtn.addEventListener('mouseleave', () => deleteBtn.style.background = '#f44336');
                     deleteBtn.addEventListener('click', () => {
-                        fieldDiv.remove();
+                        // Confirm deletion
+                        const confirmMessage = `Are you sure you want to delete the tag "${key}"?\n\nThis will also remove all field mappings associated with this tag.`;
+                        if (confirm(confirmMessage)) {
+                            // Remove the tag from taggedData
+                            delete taggedData.tags[key];
+
+                            // Remove all field mappings that use this tag
+                            const removedMappings = [];
+                            Object.keys(taggedData.fieldMappings).forEach(fieldName => {
+                                if (taggedData.fieldMappings[fieldName] === key) {
+                                    delete taggedData.fieldMappings[fieldName];
+                                    removedMappings.push(fieldName);
+                                }
+                            });
+
+                            // Save updated data to localStorage
+                            saveTaggedData(taggedData);
+
+                            // Remove the field from UI
+                            fieldDiv.remove();
+
+                            // Update the tag selector dropdown
+                            updateTagSelector();
+
+                            // Update mappings display if it exists
+                            if (typeof updateMappingsDisplay === 'function') {
+                                updateMappingsDisplay();
+                            }
+
+                            // Show success message
+                            let successMessage = `✅ Deleted tag "${key}" successfully!`;
+                            if (removedMappings.length > 0) {
+                                successMessage += `\n\n🔗 Also removed ${removedMappings.length} field mapping${removedMappings.length > 1 ? 's' : ''}:`;
+                                successMessage += `\n${removedMappings.map(field => `• "${field}"`).join('\n')}`;
+                            }
+                            alert(successMessage);
+
+                            console.log(`🗑️ Deleted tag "${key}" and ${removedMappings.length} associated field mappings`);
+                            console.log('Removed field mappings:', removedMappings);
+                        }
                     });
                     fieldDiv.appendChild(deleteBtn);
                 }
@@ -2120,6 +2272,12 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                 // Add the new tag
                 taggedData.tags[tagName] = tagValue;
 
+                // Auto-create intelligent field mappings based on tag name
+                const autoMappings = generateAutoFieldMappings(tagName);
+                autoMappings.forEach(fieldName => {
+                    taggedData.fieldMappings[fieldName] = tagName;
+                });
+
                 // Create and add the new tag field to the form
                 const newFieldRow = createFieldRow(tagName, tagValue, true);
                 form.appendChild(newFieldRow);
@@ -2127,12 +2285,32 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                 // Update the tag selector dropdown
                 updateTagSelector();
 
+                // Update mappings display if it exists
+                if (typeof updateMappingsDisplay === 'function') {
+                    updateMappingsDisplay();
+                }
+
                 // Clear inputs
                 tagNameInput.value = '';
                 tagValueInput.value = '';
                 tagNameInput.focus();
 
+                // Show success message with auto-mappings info
+                let successMessage = `✅ Added new tag: ${tagName} = ${tagValue}`;
+                if (autoMappings.length > 0) {
+                    successMessage += `\n\n🔗 Auto-created ${autoMappings.length} field mapping${autoMappings.length > 1 ? 's' : ''}:`;
+                    successMessage += `\n${autoMappings.map(field => `• "${field}"`).join('\n')}`;
+                    successMessage += `\n\n💡 These fields will now automatically use the value "${tagValue}" when filling forms.`;
+                    successMessage += `\n\nYou can add more field mappings using the "Map Field to Existing Tag" section below.`;
+                } else {
+                    successMessage += `\n\n💡 Use the "Map Field to Existing Tag" section below to map form fields to this tag.`;
+                }
+                alert(successMessage);
+
                 console.log(`✅ Added new tag: ${tagName} = ${tagValue}`);
+                if (autoMappings.length > 0) {
+                    console.log(`🔗 Auto-mapped to fields:`, autoMappings);
+                }
             }
 
             // Add field mapping functionality
@@ -3351,7 +3529,7 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
 
         // Create the icon image
         const icon = document.createElement('img');
-        icon.src = 'https://img.icons8.com/?size=256&id=q3wGnFmrhHJI&format=png';
+        icon.src = 'https://cdn-icons-png.flaticon.com/512/17113/17113805.png';
         icon.alt = 'Form Filler';
         icon.style.cssText = `
             width: 50px;
@@ -3359,7 +3537,7 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
             border-radius: 50%;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
-            background: white;
+            background: #473080;
             padding: 8px;
         `;
 
