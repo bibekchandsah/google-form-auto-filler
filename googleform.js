@@ -40,7 +40,11 @@
             'GRADUATION_PERCENTAGE': '83.65',
             'GRADUATION_YOP': '2026',
             'NATIONALITY': 'Nepalese',
-            'BACKLOGS': '0'
+            'BACKLOGS': '0',
+            'DATE_OF_BIRTH': '2002-12-28',
+            'BIRTH_DATE': '2002-12-28',
+            'DOB': '28/12/2002',
+            'GRADUATION_DATE': '2026-05-15'
         },
         // Field mappings to tags - cleaner format with multiple fields per tag
         fieldMappings: createFieldMappings({
@@ -58,7 +62,11 @@
             'GRADUATION_PERCENTAGE': ['Graduation %'],
             'GRADUATION_YOP': ['YOP'],
             'NATIONALITY': ['Nationality'],
-            'BACKLOGS': ['No. of Backlogs']
+            'BACKLOGS': ['No. of Backlogs'],
+            'DATE_OF_BIRTH': ['Date of Birth', 'Birth Date', 'DOB'],
+            'BIRTH_DATE': ['Birth Date', 'Date of Birth'],
+            'DOB': ['DOB', 'Date of Birth'],
+            'GRADUATION_DATE': ['Graduation Date', 'Expected Graduation']
         })
     };
 
@@ -67,6 +75,353 @@
 
     // Track modal state for toggle functionality
     let isCustomizationModalOpen = false;
+
+    // Error handling system
+    const ErrorHandler = {
+        // Error types with user-friendly messages
+        errorTypes: {
+            STORAGE_ERROR: {
+                title: 'Storage Error',
+                icon: '💾',
+                color: '#ff5722',
+                recoverable: true
+            },
+            VALIDATION_ERROR: {
+                title: 'Validation Error',
+                icon: '⚠️',
+                color: '#ff9800',
+                recoverable: true
+            },
+            FORM_FILL_ERROR: {
+                title: 'Form Filling Error',
+                icon: '📝',
+                color: '#f44336',
+                recoverable: true
+            },
+            IMPORT_EXPORT_ERROR: {
+                title: 'Import/Export Error',
+                icon: '📁',
+                color: '#e91e63',
+                recoverable: true
+            },
+            NETWORK_ERROR: {
+                title: 'Network Error',
+                icon: '🌐',
+                color: '#9c27b0',
+                recoverable: true
+            },
+            UNKNOWN_ERROR: {
+                title: 'Unexpected Error',
+                icon: '❌',
+                color: '#795548',
+                recoverable: false
+            }
+        },
+
+        // Show enhanced error modal
+        showError(errorType, message, details = null, recoveryOptions = []) {
+            const errorInfo = this.errorTypes[errorType] || this.errorTypes.UNKNOWN_ERROR;
+
+            // Log detailed error information
+            console.group(`${errorInfo.icon} ${errorInfo.title}`);
+            console.error('Message:', message);
+            if (details) console.error('Details:', details);
+            console.groupEnd();
+
+            // Create error modal
+            this.createErrorModal(errorInfo, message, details, recoveryOptions);
+        },
+
+        // Create error modal with recovery options
+        createErrorModal(errorInfo, message, details, recoveryOptions) {
+            // Remove existing error modal
+            const existingModal = document.getElementById('error-modal-overlay');
+            if (existingModal) existingModal.remove();
+
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'error-modal-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 10001;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-family: Arial, sans-serif;
+                animation: fadeIn 0.3s ease;
+            `;
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 16px;
+                padding: 32px;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+                text-align: center;
+                position: relative;
+                animation: slideIn 0.3s ease;
+            `;
+
+            // Create error icon and title
+            const header = document.createElement('div');
+            header.style.cssText = 'margin-bottom: 24px;';
+
+            const icon = document.createElement('div');
+            icon.style.cssText = `
+                font-size: 48px;
+                margin-bottom: 16px;
+                animation: pulse 2s infinite;
+            `;
+            icon.textContent = errorInfo.icon;
+
+            const title = document.createElement('h2');
+            title.style.cssText = `
+                margin: 0 0 8px 0;
+                color: ${errorInfo.color};
+                font-size: 24px;
+                font-weight: bold;
+            `;
+            title.textContent = errorInfo.title;
+
+            header.appendChild(icon);
+            header.appendChild(title);
+
+            // Create error message
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                color: #333;
+                font-size: 16px;
+                line-height: 1.5;
+                margin-bottom: 24px;
+                text-align: left;
+                background: #f5f5f5;
+                padding: 16px;
+                border-radius: 8px;
+                border-left: 4px solid ${errorInfo.color};
+            `;
+            messageDiv.textContent = message;
+
+            // Create details section (collapsible)
+            let detailsSection = null;
+            if (details) {
+                detailsSection = document.createElement('div');
+                detailsSection.style.cssText = 'margin-bottom: 24px;';
+
+                const detailsToggle = document.createElement('button');
+                detailsToggle.style.cssText = `
+                    background: none;
+                    border: none;
+                    color: #666;
+                    font-size: 14px;
+                    cursor: pointer;
+                    text-decoration: underline;
+                    margin-bottom: 12px;
+                `;
+                detailsToggle.textContent = '🔍 Show Technical Details';
+
+                const detailsContent = document.createElement('div');
+                detailsContent.style.cssText = `
+                    display: none;
+                    background: #f8f8f8;
+                    padding: 12px;
+                    border-radius: 6px;
+                    font-family: monospace;
+                    font-size: 12px;
+                    color: #666;
+                    text-align: left;
+                    white-space: pre-wrap;
+                    max-height: 200px;
+                    overflow-y: auto;
+                `;
+                detailsContent.textContent = typeof details === 'object' ? JSON.stringify(details, null, 2) : details;
+
+                detailsToggle.addEventListener('click', () => {
+                    const isVisible = detailsContent.style.display !== 'none';
+                    detailsContent.style.display = isVisible ? 'none' : 'block';
+                    detailsToggle.textContent = isVisible ? '🔍 Show Technical Details' : '🔼 Hide Technical Details';
+                });
+
+                detailsSection.appendChild(detailsToggle);
+                detailsSection.appendChild(detailsContent);
+            }
+
+            // Create recovery options
+            const recoverySection = document.createElement('div');
+            recoverySection.style.cssText = 'margin-bottom: 24px;';
+
+            if (recoveryOptions.length > 0) {
+                const recoveryTitle = document.createElement('h3');
+                recoveryTitle.style.cssText = 'margin: 0 0 16px 0; color: #333; font-size: 18px;';
+                recoveryTitle.textContent = '🔧 Recovery Options';
+                recoverySection.appendChild(recoveryTitle);
+
+                recoveryOptions.forEach((option, index) => {
+                    const optionButton = document.createElement('button');
+                    optionButton.style.cssText = `
+                        display: block;
+                        width: 100%;
+                        margin-bottom: 12px;
+                        padding: 12px 16px;
+                        background: ${option.primary ? '#4caf50' : '#2196f3'};
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    `;
+                    optionButton.textContent = `${option.icon || '🔧'} ${option.text}`;
+
+                    optionButton.addEventListener('mouseenter', () => {
+                        optionButton.style.transform = 'translateY(-2px)';
+                        optionButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                    });
+
+                    optionButton.addEventListener('mouseleave', () => {
+                        optionButton.style.transform = 'translateY(0)';
+                        optionButton.style.boxShadow = 'none';
+                    });
+
+                    optionButton.addEventListener('click', () => {
+                        document.body.removeChild(overlay);
+                        if (option.action) option.action();
+                    });
+
+                    recoverySection.appendChild(optionButton);
+                });
+            }
+
+            // Create close button
+            const closeButton = document.createElement('button');
+            closeButton.style.cssText = `
+                background: #666;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.2s ease;
+            `;
+            closeButton.textContent = '❌ Close';
+            closeButton.addEventListener('mouseenter', () => closeButton.style.background = '#555');
+            closeButton.addEventListener('mouseleave', () => closeButton.style.background = '#666');
+            closeButton.addEventListener('click', () => document.body.removeChild(overlay));
+
+            // Assemble modal
+            modal.appendChild(header);
+            modal.appendChild(messageDiv);
+            if (detailsSection) modal.appendChild(detailsSection);
+            modal.appendChild(recoverySection);
+            modal.appendChild(closeButton);
+            overlay.appendChild(modal);
+
+            // Add CSS animations
+            if (!document.getElementById('error-modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'error-modal-styles';
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateY(-50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.1); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+
+            document.body.appendChild(overlay);
+        },
+
+        // Quick error notification (non-blocking)
+        showNotification(message, type = 'error', duration = 5000) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10002;
+                background: ${type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#4caf50'};
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                font-weight: bold;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideInRight 0.3s ease;
+                max-width: 300px;
+                word-wrap: break-word;
+            `;
+
+            const icon = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : '✅';
+            notification.textContent = `${icon} ${message}`;
+
+            // Add slide animation
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOutRight {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(notification);
+
+            // Auto-remove after duration
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+
+            // Click to dismiss
+            notification.addEventListener('click', () => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            });
+        }
+    };
 
     // Function to load tagged data from localStorage
     function loadTaggedData() {
@@ -81,7 +436,29 @@
                 };
             }
         } catch (error) {
-            console.log('Error loading saved tagged data:', error);
+            ErrorHandler.showError('STORAGE_ERROR',
+                'Failed to load your saved form data from browser storage.',
+                error,
+                [
+                    {
+                        text: 'Use Default Data',
+                        icon: '🔄',
+                        primary: true,
+                        action: () => {
+                            console.log('Using default data due to storage error');
+                            ErrorHandler.showNotification('Using default form data', 'warning');
+                        }
+                    },
+                    {
+                        text: 'Clear Storage & Restart',
+                        icon: '🗑️',
+                        action: () => {
+                            localStorage.removeItem('googleFormFillerTaggedData');
+                            location.reload();
+                        }
+                    }
+                ]
+            );
         }
         return JSON.parse(JSON.stringify(defaultTaggedData)); // Deep copy
     }
@@ -92,7 +469,32 @@
             localStorage.setItem('googleFormFillerTaggedData', JSON.stringify(data));
             console.log('✅ Tagged data saved to localStorage');
         } catch (error) {
-            console.error('❌ Error saving tagged data:', error);
+            ErrorHandler.showError('STORAGE_ERROR',
+                'Failed to save your form data to browser storage. Your changes may be lost.',
+                error,
+                [
+                    {
+                        text: 'Retry Save',
+                        icon: '🔄',
+                        primary: true,
+                        action: () => {
+                            try {
+                                localStorage.setItem('googleFormFillerTaggedData', JSON.stringify(data));
+                                ErrorHandler.showNotification('Data saved successfully!', 'success');
+                            } catch (retryError) {
+                                ErrorHandler.showNotification('Save failed again. Check browser storage.', 'error');
+                            }
+                        }
+                    },
+                    {
+                        text: 'Export as Backup',
+                        icon: '📁',
+                        action: () => {
+                            exportDataAsJSON();
+                        }
+                    }
+                ]
+            );
         }
     }
 
@@ -181,8 +583,36 @@
             alert('📁 Data exported as JSON file successfully!\n\nFile saved to your Downloads folder.');
             return true;
         } catch (error) {
-            console.error('❌ Error exporting JSON:', error);
-            alert('❌ Error exporting data as JSON. Check console for details.');
+            ErrorHandler.showError('IMPORT_EXPORT_ERROR',
+                'Failed to export your data as JSON file.',
+                error,
+                [
+                    {
+                        text: 'Try Again',
+                        icon: '🔄',
+                        primary: true,
+                        action: () => exportDataAsJSON()
+                    },
+                    {
+                        text: 'Export as CSV Instead',
+                        icon: '📊',
+                        action: () => exportDataAsCSV()
+                    },
+                    {
+                        text: 'Copy Data to Clipboard',
+                        icon: '📋',
+                        action: () => {
+                            try {
+                                const dataText = JSON.stringify(taggedData, null, 2);
+                                navigator.clipboard.writeText(dataText);
+                                ErrorHandler.showNotification('Data copied to clipboard!', 'success');
+                            } catch (clipError) {
+                                ErrorHandler.showNotification('Failed to copy to clipboard', 'error');
+                            }
+                        }
+                    }
+                ]
+            );
             return false;
         }
     }
@@ -219,8 +649,32 @@
             alert('📊 Data exported as CSV file successfully!\n\nFile saved to your Downloads folder.');
             return true;
         } catch (error) {
-            console.error('❌ Error exporting CSV:', error);
-            alert('❌ Error exporting data as CSV. Check console for details.');
+            ErrorHandler.showError('IMPORT_EXPORT_ERROR',
+                'Failed to export your data as CSV file.',
+                error,
+                [
+                    {
+                        text: 'Try Again',
+                        icon: '🔄',
+                        primary: true,
+                        action: () => exportDataAsCSV()
+                    },
+                    {
+                        text: 'Export as JSON Instead',
+                        icon: '📁',
+                        action: () => exportDataAsJSON()
+                    },
+                    {
+                        text: 'View Data in Console',
+                        icon: '🔍',
+                        action: () => {
+                            console.table(taggedData.tags);
+                            console.table(taggedData.fieldMappings);
+                            ErrorHandler.showNotification('Data logged to console (F12)', 'success');
+                        }
+                    }
+                ]
+            );
             return false;
         }
     }
@@ -262,8 +716,31 @@
                     alert(`📁 JSON data imported successfully!\n\n✅ Imported ${importedTags} tags\n✅ Imported ${importedMappings} field mappings\n\nData has been merged with your existing data.`);
 
                 } catch (error) {
-                    console.error('❌ Error importing JSON:', error);
-                    alert(`❌ Error importing JSON file:\n\n${error.message}\n\nPlease check the file format and try again.`);
+                    ErrorHandler.showError('IMPORT_EXPORT_ERROR',
+                        'Failed to import JSON file. The file may be corrupted or in wrong format.',
+                        error,
+                        [
+                            {
+                                text: 'Try Different File',
+                                icon: '📁',
+                                primary: true,
+                                action: () => importDataFromJSON()
+                            },
+                            {
+                                text: 'Import CSV Instead',
+                                icon: '📊',
+                                action: () => importDataFromCSV()
+                            },
+                            {
+                                text: 'Manual Data Entry',
+                                icon: '✏️',
+                                action: () => {
+                                    // Close any existing modals and open customization
+                                    setTimeout(() => showCustomizationModal(), 500);
+                                }
+                            }
+                        ]
+                    );
                 }
             };
 
@@ -327,8 +804,45 @@
                     alert(`📊 CSV data imported successfully!\n\n✅ Imported ${importedTagCount} tags\n✅ Imported ${importedMappingCount} field mappings\n\nData has been merged with your existing data.`);
 
                 } catch (error) {
-                    console.error('❌ Error importing CSV:', error);
-                    alert(`❌ Error importing CSV file:\n\n${error.message}\n\nPlease check the file format and try again.`);
+                    ErrorHandler.showError('IMPORT_EXPORT_ERROR',
+                        'Failed to import CSV file. The file may have incorrect format or encoding.',
+                        error,
+                        [
+                            {
+                                text: 'Try Different File',
+                                icon: '📊',
+                                primary: true,
+                                action: () => importDataFromCSV()
+                            },
+                            {
+                                text: 'Import JSON Instead',
+                                icon: '📁',
+                                action: () => importDataFromJSON()
+                            },
+                            {
+                                text: 'Check CSV Format',
+                                icon: '📋',
+                                action: () => {
+                                    const formatInfo = `Expected CSV format:
+Type,Key,Value,Description
+Tag,FULL_NAME,"John Doe",Tag value
+Tag,EMAIL,"john@example.com",Tag value
+Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
+
+                                    ErrorHandler.showError('IMPORT_EXPORT_ERROR',
+                                        'CSV Format Requirements',
+                                        formatInfo,
+                                        [{
+                                            text: 'Try Again',
+                                            icon: '🔄',
+                                            primary: true,
+                                            action: () => importDataFromCSV()
+                                        }]
+                                    );
+                                }
+                            }
+                        ]
+                    );
                 }
             };
 
@@ -370,6 +884,28 @@
                 return year >= 1900 && year <= currentYear + 10;
             }
         },
+        date: {
+            pattern: /^\d{4}-\d{2}-\d{2}$|^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/,
+            message: 'Please enter a valid date (YYYY-MM-DD, DD/MM/YYYY, or DD-MM-YYYY)',
+            test: (value) => {
+                try {
+                    // Try to parse various date formats
+                    let dateValue = value;
+
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        dateValue = value;
+                    } else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(value)) {
+                        const parts = value.split(/[\/\-]/);
+                        dateValue = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+
+                    const date = new Date(dateValue);
+                    return !isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100;
+                } catch {
+                    return false;
+                }
+            }
+        },
         rollNumber: {
             pattern: /^[A-Z0-9]{6,15}$/i,
             message: 'Please enter a valid roll number (6-15 alphanumeric characters)',
@@ -390,42 +926,48 @@
     // Function to detect field type based on field name
     function detectFieldType(fieldName) {
         const lowerField = fieldName.toLowerCase();
-        
+
         // Email detection
         if (lowerField.includes('email') || lowerField.includes('mail')) {
             return 'email';
         }
-        
+
         // Phone detection
         if (lowerField.includes('phone') || lowerField.includes('mobile') || lowerField.includes('contact')) {
             return 'phone';
         }
-        
+
         // Percentage detection
         if (lowerField.includes('%') || lowerField.includes('percentage') || lowerField.includes('percent')) {
             return 'percentage';
         }
-        
-        // Year detection
+
+        // Date detection (full dates)
+        if (lowerField.includes('date') || lowerField.includes('birth') || lowerField.includes('dob') ||
+            lowerField.includes('born') || lowerField.includes('graduation date')) {
+            return 'date';
+        }
+
+        // Year detection (year only fields)
         if (lowerField.includes('year') || lowerField.includes('yop') || lowerField.match(/\b(19|20)\d{2}\b/)) {
             return 'year';
         }
-        
+
         // Roll number detection
         if (lowerField.includes('roll') || lowerField.includes('registration') || lowerField.includes('student id')) {
             return 'rollNumber';
         }
-        
+
         // Name detection
         if (lowerField.includes('name') && !lowerField.includes('username') && !lowerField.includes('filename')) {
             return 'name';
         }
-        
+
         // Number detection (backlogs, count, etc.)
         if (lowerField.includes('backlog') || lowerField.includes('count') || lowerField.includes('number')) {
             return 'number';
         }
-        
+
         return null; // No specific validation needed
     }
 
@@ -442,7 +984,7 @@
 
         const validator = validators[fieldType];
         const isValid = validator.test(value.trim());
-        
+
         return {
             isValid,
             message: isValid ? '' : validator.message,
@@ -469,15 +1011,257 @@
         };
     }
 
-    // Function to show validation errors
+    // Function to auto-fix common validation errors
+    function autoFixValidationErrors(validationResults) {
+        const inputs = document.querySelectorAll('input[data-key]');
+        let fixedCount = 0;
+        const fixedFields = [];
+
+        inputs.forEach(input => {
+            const tagName = input.getAttribute('data-key');
+            const validation = validationResults.results[tagName];
+
+            if (validation && !validation.isValid) {
+                const currentValue = input.value.trim();
+                let fixedValue = null;
+
+                // Auto-fix common issues based on field type
+                switch (validation.fieldType) {
+                    case 'email':
+                        // Fix common email issues
+                        if (currentValue && !currentValue.includes('@')) {
+                            fixedValue = `${currentValue}@gmail.com`;
+                        } else if (currentValue.includes('@') && !currentValue.includes('.')) {
+                            fixedValue = `${currentValue}.com`;
+                        } else if (currentValue.includes(' ')) {
+                            fixedValue = currentValue.replace(/\s+/g, '');
+                        }
+                        break;
+
+                    case 'phone':
+                        // Fix phone number formatting
+                        if (currentValue) {
+                            const digitsOnly = currentValue.replace(/\D/g, '');
+                            if (digitsOnly.length === 10) {
+                                fixedValue = digitsOnly;
+                            } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+                                fixedValue = digitsOnly.substring(1);
+                            }
+                        }
+                        break;
+
+                    case 'percentage':
+                        // Fix percentage values
+                        if (currentValue) {
+                            const numValue = parseFloat(currentValue.replace('%', ''));
+                            if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+                                fixedValue = numValue.toString();
+                            }
+                        }
+                        break;
+
+                    case 'year':
+                        // Fix year values
+                        if (currentValue) {
+                            const yearMatch = currentValue.match(/\d{4}/);
+                            if (yearMatch) {
+                                const year = parseInt(yearMatch[0]);
+                                const currentYear = new Date().getFullYear();
+                                if (year >= 1900 && year <= currentYear + 10) {
+                                    fixedValue = year.toString();
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'name':
+                        // Fix name formatting
+                        if (currentValue) {
+                            fixedValue = currentValue
+                                .replace(/[^a-zA-Z\s]/g, '') // Remove non-letter characters
+                                .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+                                .trim()
+                                .split(' ')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(' ');
+                        }
+                        break;
+
+                    case 'number':
+                        // Fix number values
+                        if (currentValue) {
+                            const numValue = currentValue.replace(/\D/g, '');
+                            if (numValue) {
+                                fixedValue = numValue;
+                            }
+                        }
+                        break;
+                }
+
+                // Apply the fix if we found one
+                if (fixedValue && fixedValue !== currentValue) {
+                    input.value = fixedValue;
+
+                    // Trigger validation to update UI
+                    const newValidation = validateField(tagName, fixedValue);
+                    addValidationFeedback(input, newValidation);
+
+                    fixedCount++;
+                    fixedFields.push(`${tagName}: "${currentValue}" → "${fixedValue}"`);
+
+                    console.log(`🔧 Auto-fixed ${tagName}: "${currentValue}" → "${fixedValue}"`);
+                }
+            }
+        });
+
+        // Show results
+        if (fixedCount > 0) {
+            const fixedList = fixedFields.join('\n');
+            ErrorHandler.showNotification(`🔧 Auto-Fixed ${fixedCount} field${fixedCount > 1 ? 's' : ''}! Please review and save.`, 'success');
+            console.log(`🔧 Auto-fixed fields:\n${fixedList}`);
+
+            // Update validation summary
+            setTimeout(() => {
+                const summaryElement = document.querySelector('#validation-summary');
+                if (summaryElement && window.updateValidationSummary) {
+                    window.updateValidationSummary();
+                }
+            }, 100);
+        } else {
+            ErrorHandler.showNotification('🔧 No automatic fixes available. Please review fields manually.', 'warning');
+        }
+    }
+
+    // Function to show detailed validation suggestions
+    function showValidationSuggestions(validationResults) {
+        const errorFields = Object.entries(validationResults.results)
+            .filter(([_, result]) => !result.isValid);
+
+        let suggestions = '💡 VALIDATION FIX SUGGESTIONS:\n\n';
+
+        errorFields.forEach(([fieldName, result]) => {
+            suggestions += `🔸 ${fieldName}:\n`;
+            suggestions += `   Problem: ${result.message}\n`;
+
+            // Add specific suggestions based on field type
+            switch (result.fieldType) {
+                case 'email':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Make sure it contains @ symbol\n';
+                    suggestions += '      • Add domain like @gmail.com\n';
+                    suggestions += '      • Remove any spaces\n';
+                    suggestions += '      • Example: user@example.com\n\n';
+                    break;
+
+                case 'phone':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Use 10 digits for mobile numbers\n';
+                    suggestions += '      • Remove country code if present\n';
+                    suggestions += '      • Example: 9876543210\n\n';
+                    break;
+
+                case 'percentage':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Enter number between 0-100\n';
+                    suggestions += '      • Don\'t include % symbol\n';
+                    suggestions += '      • Use decimal for precision (e.g., 85.5)\n\n';
+                    break;
+
+                case 'year':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Enter 4-digit year (e.g., 2020)\n';
+                    suggestions += '      • Year should be between 1900-2035\n\n';
+                    break;
+
+                case 'name':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Use only letters and spaces\n';
+                    suggestions += '      • 2-50 characters long\n';
+                    suggestions += '      • Example: John Doe\n\n';
+                    break;
+
+                case 'number':
+                    suggestions += '   💡 Suggestions:\n';
+                    suggestions += '      • Use only digits (0-9)\n';
+                    suggestions += '      • No letters or special characters\n\n';
+                    break;
+
+                default:
+                    suggestions += '   💡 Please check the format and try again\n\n';
+            }
+        });
+
+        suggestions += '🔧 You can also try the "Auto-Fix" button to automatically correct common issues.';
+
+        alert(suggestions);
+    }
+
+    // Function to show validation errors with recovery options
     function showValidationErrors(validationResults) {
-        const errors = Object.entries(validationResults.results)
-            .filter(([_, result]) => !result.isValid)
+        const errorFields = Object.entries(validationResults.results)
+            .filter(([_, result]) => !result.isValid);
+
+        const errorList = errorFields
             .map(([fieldName, result]) => `• ${fieldName}: ${result.message}`)
             .join('\n');
 
-        const errorMessage = `❌ VALIDATION ERRORS FOUND:\n\n${errors}\n\nPlease fix these errors before saving.`;
-        alert(errorMessage);
+        ErrorHandler.showError('VALIDATION_ERROR',
+            `Found ${errorFields.length} validation error${errorFields.length > 1 ? 's' : ''} in your form data.`,
+            errorList,
+            [
+                {
+                    text: '🔧 Auto-Fix Common Issues',
+                    icon: '🔧',
+                    primary: true,
+                    action: () => {
+                        autoFixValidationErrors(validationResults);
+                    }
+                },
+                {
+                    text: '💡 Show Fix Suggestions',
+                    icon: '💡',
+                    action: () => {
+                        showValidationSuggestions(validationResults);
+                    }
+                },
+                {
+                    text: 'Fix Errors Manually',
+                    icon: '✏️',
+                    action: () => {
+                        ErrorHandler.showNotification('Please correct the highlighted fields and try again', 'info');
+                    }
+                },
+                {
+                    text: 'Save Anyway (Skip Validation)',
+                    icon: '⚠️',
+                    action: () => {
+                        if (confirm('Are you sure you want to save data with validation errors? This may cause issues when filling forms.')) {
+                            // Force save without validation
+                            const inputs = document.querySelectorAll('input[data-key]');
+                            const newTags = {};
+                            inputs.forEach(input => {
+                                const tagName = input.getAttribute('data-key');
+                                const value = input.value.trim();
+                                newTags[tagName] = value;
+                            });
+                            taggedData.tags = { ...taggedData.tags, ...newTags };
+                            saveTaggedData(taggedData);
+                            ErrorHandler.showNotification('Data saved with validation warnings', 'warning');
+                        }
+                    }
+                },
+                {
+                    text: 'Reset to Defaults',
+                    icon: '🔄',
+                    action: () => {
+                        if (confirm('Reset all fields to default values? This will lose your current changes.')) {
+                            location.reload();
+                        }
+                    }
+                }
+            ]
+        );
+
         console.error('Validation errors:', validationResults.results);
     }
 
@@ -485,7 +1269,7 @@
     function addValidationFeedback(input, validation) {
         // Remove existing validation classes and icons
         input.classList.remove('validation-success', 'validation-error');
-        
+
         // Remove existing validation elements
         const existingIcon = input.parentNode.querySelector('.validation-icon');
         const existingTooltip = input.parentNode.querySelector('.validation-tooltip');
@@ -497,7 +1281,7 @@
             input.classList.add('validation-error');
             input.style.borderColor = '#f44336';
             input.style.boxShadow = '0 0 3px rgba(244, 67, 54, 0.2)';
-            
+
             // Add small error icon
             const errorIcon = document.createElement('div');
             errorIcon.className = 'validation-icon error-icon';
@@ -521,12 +1305,12 @@
             `;
             errorIcon.textContent = '!';
             errorIcon.title = validation.message;
-            
+
             // Make parent position relative for absolute positioning
             input.parentNode.style.position = 'relative';
             input.style.paddingRight = '32px'; // Make room for icon
             input.parentNode.appendChild(errorIcon);
-            
+
             // Add hover tooltip for error message
             const tooltip = document.createElement('div');
             tooltip.className = 'validation-tooltip';
@@ -547,7 +1331,7 @@
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             `;
             tooltip.textContent = validation.message;
-            
+
             // Show tooltip on hover
             errorIcon.addEventListener('mouseenter', () => {
                 tooltip.style.opacity = '1';
@@ -555,15 +1339,15 @@
             errorIcon.addEventListener('mouseleave', () => {
                 tooltip.style.opacity = '0';
             });
-            
+
             input.parentNode.appendChild(tooltip);
-            
+
         } else if (validation.fieldType) {
             // Add success styling with subtle green border
             input.classList.add('validation-success');
             input.style.borderColor = '#4caf50';
             input.style.boxShadow = '0 0 3px rgba(76, 175, 80, 0.2)';
-            
+
             // Add small success checkmark
             const successIcon = document.createElement('div');
             successIcon.className = 'validation-icon success-icon';
@@ -586,12 +1370,12 @@
             `;
             successIcon.textContent = '✓';
             successIcon.title = `Valid ${validation.fieldType}`;
-            
+
             // Make parent position relative for absolute positioning
             input.parentNode.style.position = 'relative';
             input.style.paddingRight = '32px'; // Make room for icon
             input.parentNode.appendChild(successIcon);
-            
+
         } else {
             // Reset to default styling
             input.style.borderColor = '#ddd';
@@ -1061,14 +1845,14 @@
                 input.addEventListener('focus', () => {
                     input.style.borderColor = '#2196f3';
                     input.style.boxShadow = '0 0 0 2px rgba(33, 150, 243, 0.1)';
-                    
+
                     // Hide tooltip on focus
                     const tooltip = input.parentNode.querySelector('.validation-tooltip');
                     if (tooltip) {
                         tooltip.style.opacity = '0';
                     }
                 });
-                
+
                 input.addEventListener('blur', () => {
                     // Validate field on blur
                     const validation = validateField(key, input.value);
@@ -1079,13 +1863,13 @@
                 input.addEventListener('input', () => {
                     // Clear previous validation styling during typing
                     input.classList.remove('validation-success', 'validation-error');
-                    
+
                     // Remove validation icons while typing
                     const existingIcon = input.parentNode.querySelector('.validation-icon');
                     const existingTooltip = input.parentNode.querySelector('.validation-tooltip');
                     if (existingIcon) existingIcon.remove();
                     if (existingTooltip) existingTooltip.remove();
-                    
+
                     // Reset padding and styling
                     input.style.paddingRight = '12px';
                     input.style.borderColor = '#2196f3';
@@ -1522,7 +2306,7 @@
                         const validation = validateField(tagName, value);
                         validationResults[tagName] = validation;
                         totalValidated++;
-                        
+
                         if (validation.fieldType) { // Field has validation rules
                             if (validation.isValid) {
                                 validCount++;
@@ -1535,7 +2319,7 @@
 
                 if (totalValidated > 0) {
                     validationSummary.style.display = 'block';
-                    
+
                     if (errorCount > 0) {
                         validationSummary.style.background = 'rgba(244, 67, 54, 0.1)';
                         validationSummary.style.border = '1px solid rgba(244, 67, 54, 0.3)';
@@ -1559,18 +2343,18 @@
             function createFieldRowWithValidation(key, value, isCustom = false) {
                 const fieldRow = originalCreateFieldRow(key, value, isCustom);
                 const input = fieldRow.querySelector('input');
-                
+
                 if (input) {
                     // Add validation summary update to existing events
                     input.addEventListener('blur', () => {
                         setTimeout(updateValidationSummary, 100); // Small delay to ensure validation feedback is applied
                     });
-                    
+
                     input.addEventListener('input', () => {
                         setTimeout(updateValidationSummary, 100);
                     });
                 }
-                
+
                 return fieldRow;
             }
 
@@ -1673,11 +2457,11 @@
 
                 // Validate all collected data
                 const validationResults = validateAllData(newTags);
-                
+
                 if (validationResults.hasErrors) {
                     // Show validation errors and prevent saving
                     showValidationErrors(validationResults);
-                    
+
                     // Add visual feedback to invalid inputs
                     inputs.forEach(input => {
                         const tagName = input.getAttribute('data-key');
@@ -1686,7 +2470,7 @@
                             addValidationFeedback(input, validation);
                         }
                     });
-                    
+
                     return false; // Prevent saving
                 }
 
@@ -1703,7 +2487,7 @@
             // Add event listeners for save only button
             saveOnlyButton.addEventListener('click', () => {
                 const isValid = collectAndSaveData();
-                
+
                 if (isValid) {
                     // Close modal
                     closeModal();
@@ -1720,7 +2504,7 @@
             // Add event listeners for save and fill button
             saveAndFillButton.addEventListener('click', () => {
                 const isValid = collectAndSaveData();
-                
+
                 if (isValid) {
                     // Close modal
                     closeModal();
@@ -1769,6 +2553,213 @@
         });
 
         return true;
+    }
+
+    // Function to fill date inputs
+    function fillDateInput(input, value) {
+        if (!input || !value) return false;
+
+        try {
+            // Convert various date formats to YYYY-MM-DD format
+            let dateValue = value;
+
+            // If value is already in YYYY-MM-DD format, use it directly
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                dateValue = value;
+            }
+            // If value is in DD/MM/YYYY or DD-MM-YYYY format
+            else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(value)) {
+                const parts = value.split(/[\/\-]/);
+                dateValue = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            // If value is in MM/DD/YYYY or MM-DD-YYYY format
+            else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(value)) {
+                const parts = value.split(/[\/\-]/);
+                dateValue = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+            }
+            // If value is just a year (for YOP fields)
+            else if (/^\d{4}$/.test(value)) {
+                // Use January 1st of that year as default
+                dateValue = `${value}-01-01`;
+            }
+            // Try to parse as a date string
+            else {
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                    dateValue = date.toISOString().split('T')[0];
+                } else {
+                    console.log(`Could not parse date value: ${value}`);
+                    return false;
+                }
+            }
+
+            // Set the date value
+            input.value = dateValue;
+            input.setAttribute('data-initial-value', dateValue);
+
+            // Trigger events to ensure Google Forms recognizes the input
+            const events = ['input', 'change', 'blur'];
+            events.forEach(eventType => {
+                const event = new Event(eventType, { bubbles: true });
+                input.dispatchEvent(event);
+            });
+
+            console.log(`Date input filled: ${value} → ${dateValue}`);
+            return true;
+        } catch (error) {
+            ErrorHandler.showNotification(`Failed to fill date field: ${error.message}`, 'error');
+            console.error(`Error filling date input:`, error);
+            return false;
+        }
+    }
+
+    // Function to fill textarea inputs
+    function fillTextarea(textarea, value) {
+        if (!textarea || !value) return false;
+
+        // Set the value
+        textarea.value = value;
+        textarea.setAttribute('data-initial-value', value);
+
+        // Trigger events to ensure Google Forms recognizes the input
+        const events = ['input', 'change', 'blur'];
+        events.forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            textarea.dispatchEvent(event);
+        });
+
+        return true;
+    }
+
+    // Function to select radio button
+    function selectRadioButton(container, value) {
+        if (!container || !value) return false;
+
+        try {
+            console.log(`🔘 Looking for radio button with value: ${value}`);
+
+            // Find all radio button options
+            const radioOptions = container.querySelectorAll('[role="radio"]');
+            console.log(`Found ${radioOptions.length} radio options`);
+
+            let targetOption = null;
+
+            // Look for exact match by data-value or aria-label
+            for (const option of radioOptions) {
+                const dataValue = option.getAttribute('data-value');
+                const ariaLabel = option.getAttribute('aria-label');
+                const textElement = option.querySelector('.aDTYNe');
+                const textValue = textElement ? textElement.textContent.trim() : '';
+
+                console.log(`Radio option - data-value: "${dataValue}", aria-label: "${ariaLabel}", text: "${textValue}"`);
+
+                // Check data-value, aria-label, and text content for matches
+                if ((dataValue && dataValue.toLowerCase() === value.toLowerCase()) ||
+                    (ariaLabel && ariaLabel.toLowerCase() === value.toLowerCase()) ||
+                    (textValue && textValue.toLowerCase() === value.toLowerCase())) {
+                    targetOption = option;
+                    console.log(`✅ Found matching radio option: ${dataValue || ariaLabel || textValue}`);
+                    break;
+                }
+            }
+
+            if (targetOption) {
+                // Click the radio button to select it
+                targetOption.click();
+
+                // Add visual highlighting
+                // targetOption.style.cssText += `
+                //     background: linear-gradient(45deg, #2196f3, #64b5f6) !important;
+                //     border: 2px solid #1976d2 !important;
+                //     box-shadow: 0 0 10px #2196f3 !important;
+                //     transform: scale(1.02) !important;
+                // `;
+
+                console.log(`✅ Radio button selected: ${value}`);
+                return true;
+            } else {
+                console.log(`❌ No matching radio option found for: ${value}`);
+                return false;
+            }
+        } catch (error) {
+            ErrorHandler.showNotification(`Failed to select radio button: ${value}`, 'error');
+            console.error(`Error selecting radio button:`, error);
+            return false;
+        }
+    }
+
+    // Function to select checkboxes
+    function selectCheckboxes(container, value) {
+        if (!container || !value) return false;
+
+        try {
+            console.log(`☑️ Looking for checkboxes with value: ${value}`);
+
+            // Split value by comma for multiple selections
+            const values = value.split(',').map(v => v.trim());
+            console.log(`Checkbox values to select:`, values);
+
+            // Find all checkbox options
+            const checkboxOptions = container.querySelectorAll('[role="checkbox"]');
+            console.log(`Found ${checkboxOptions.length} checkbox options`);
+
+            let selectedCount = 0;
+
+            values.forEach(targetValue => {
+                let targetOption = null;
+
+                // Look for exact match by data-answer-value or aria-label
+                for (const option of checkboxOptions) {
+                    const dataValue = option.getAttribute('data-answer-value');
+                    const ariaLabel = option.getAttribute('aria-label');
+                    const textElement = option.querySelector('.aDTYNe');
+                    const textValue = textElement ? textElement.textContent.trim() : '';
+
+                    console.log(`Checkbox option - data-answer-value: "${dataValue}", aria-label: "${ariaLabel}", text: "${textValue}"`);
+
+                    // Check data-answer-value, aria-label, and text content for matches
+                    if ((dataValue && dataValue.toLowerCase() === targetValue.toLowerCase()) ||
+                        (ariaLabel && ariaLabel.toLowerCase() === targetValue.toLowerCase()) ||
+                        (textValue && textValue.toLowerCase() === targetValue.toLowerCase())) {
+                        targetOption = option;
+                        console.log(`✅ Found matching checkbox option: ${dataValue || ariaLabel || textValue}`);
+                        break;
+                    }
+                }
+
+                if (targetOption) {
+                    // Check if already selected
+                    const isChecked = targetOption.getAttribute('aria-checked') === 'true';
+
+                    if (!isChecked) {
+                        // Click the checkbox to select it
+                        targetOption.click();
+                        selectedCount++;
+
+                        // Add visual highlighting
+                        // targetOption.style.cssText += `
+                        //     background: linear-gradient(45deg, #4caf50, #81c784) !important;
+                        //     border: 2px solid #388e3c !important;
+                        //     box-shadow: 0 0 10px #4caf50 !important;
+                        //     transform: scale(1.02) !important;
+                        // `;
+
+                        console.log(`✅ Checkbox selected: ${targetValue}`);
+                    } else {
+                        console.log(`ℹ️ Checkbox already selected: ${targetValue}`);
+                        selectedCount++;
+                    }
+                } else {
+                    console.log(`❌ No matching checkbox found for: ${targetValue}`);
+                }
+            });
+
+            return selectedCount > 0;
+        } catch (error) {
+            ErrorHandler.showNotification(`Failed to select checkboxes: ${value}`, 'error');
+            console.error(`Error selecting checkboxes:`, error);
+            return false;
+        }
     }
 
     // Highlight dropdown options for manual selection
@@ -2249,26 +3240,73 @@
                 // Check if it's a text input field
                 const textInput = container.querySelector('input.whsOnd.zHQkBf');
                 if (textInput) {
-                    success = fillTextInput(textInput, value);
-                    if (success) {
-                        animateFieldSuccess(textInput);
-                        filledFields++;
-                    }
-                    console.log(`Text input filled for "${titleText}": ${success}`);
-                }
-                // Check if it's a dropdown field
-                else {
-                    const dropdownContainer = container.querySelector('.vQES8d');
-                    if (dropdownContainer) {
-                        success = await selectDropdownOption(dropdownContainer, value);
+                    // Check if it's a date input
+                    if (textInput.type === 'date') {
+                        success = fillDateInput(textInput, value);
                         if (success) {
-                            animateFieldSuccess(dropdownContainer);
+                            animateFieldSuccess(textInput);
                             filledFields++;
                         }
-                        console.log(`Dropdown option selected for "${titleText}": ${success}`);
+                        console.log(`Date input filled for "${titleText}": ${success}`);
                     } else {
-                        console.log(`Unknown field type for: "${titleText}"`);
-                        skippedFields++;
+                        // Regular text input
+                        success = fillTextInput(textInput, value);
+                        if (success) {
+                            animateFieldSuccess(textInput);
+                            filledFields++;
+                        }
+                        console.log(`Text input filled for "${titleText}": ${success}`);
+                    }
+                }
+                // Check if it's a textarea field
+                else {
+                    const textarea = container.querySelector('textarea.KHxj8b');
+                    if (textarea) {
+                        success = fillTextarea(textarea, value);
+                        if (success) {
+                            animateFieldSuccess(textarea);
+                            filledFields++;
+                        }
+                        console.log(`Textarea filled for "${titleText}": ${success}`);
+                    }
+                    // Check if it's a radio button field
+                    else {
+                        const radioContainer = container.querySelector('[role="radiogroup"]');
+                        if (radioContainer) {
+                            success = selectRadioButton(radioContainer, value);
+                            if (success) {
+                                animateFieldSuccess(radioContainer);
+                                filledFields++;
+                            }
+                            console.log(`Radio button selected for "${titleText}": ${success}`);
+                        }
+                        // Check if it's a checkbox field
+                        else {
+                            const checkboxContainer = container.querySelector('[role="list"]');
+                            if (checkboxContainer && checkboxContainer.querySelector('[role="checkbox"]')) {
+                                success = selectCheckboxes(checkboxContainer, value);
+                                if (success) {
+                                    animateFieldSuccess(checkboxContainer);
+                                    filledFields++;
+                                }
+                                console.log(`Checkboxes selected for "${titleText}": ${success}`);
+                            }
+                            // Check if it's a dropdown field
+                            else {
+                                const dropdownContainer = container.querySelector('.vQES8d');
+                                if (dropdownContainer) {
+                                    success = await selectDropdownOption(dropdownContainer, value);
+                                    if (success) {
+                                        animateFieldSuccess(dropdownContainer);
+                                        filledFields++;
+                                    }
+                                    console.log(`Dropdown option selected for "${titleText}": ${success}`);
+                                } else {
+                                    console.log(`Unknown field type for: "${titleText}"`);
+                                    skippedFields++;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2278,7 +3316,14 @@
             } catch (error) {
                 console.error(`Error processing field ${index}:`, error);
                 skippedFields++;
-                updateProgress(processedFields, totalFields, `Error in field ${index}`, false);
+                updateProgress(processedFields, totalFields, `Error: ${titleText || 'Unknown field'}`, false);
+
+                // Show detailed error for critical failures
+                if (error.name === 'SecurityError' || error.message.includes('Permission')) {
+                    ErrorHandler.showNotification('Security restriction encountered - some fields may need manual filling', 'warning', 8000);
+                } else {
+                    ErrorHandler.showNotification(`Field error: ${titleText || 'Unknown field'}`, 'error', 3000);
+                }
             }
         }
 
