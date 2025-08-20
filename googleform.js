@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Form Auto Filler with custom details
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.2
 // @description  Automatically fill Google Forms with predefined data
 // @author       Bibek Chand Sah
 // @icon         https://ssl.gstatic.com/docs/forms/device_home/android_192.png
@@ -2178,9 +2178,19 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                 font-size: 14px;
                 transition: border-color 0.2s;
                 background: white;
+                max-width: 100%;
+                font-family: 'Courier New', monospace;
+                line-height: 1.4;
             `;
             tagSelector.addEventListener('focus', () => tagSelector.style.borderColor = '#4caf50');
             tagSelector.addEventListener('blur', () => tagSelector.style.borderColor = '#ddd');
+
+            // Function to truncate long text for better display
+            function truncateText(text, maxLength = 20) {
+                if (!text) return '';
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            }
 
             // Populate tag selector
             function updateTagSelector() {
@@ -2194,10 +2204,22 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                 defaultOption.textContent = 'Select existing tag...';
                 tagSelector.appendChild(defaultOption);
 
-                Object.keys(taggedData.tags).forEach(tagName => {
+                // Sort tags alphabetically for better organization
+                const sortedTagNames = Object.keys(taggedData.tags).sort();
+
+                sortedTagNames.forEach(tagName => {
                     const option = document.createElement('option');
                     option.value = tagName;
-                    option.textContent = `${tagName} (${taggedData.tags[tagName]})`;
+                    
+                    const tagValue = taggedData.tags[tagName];
+                    const truncatedValue = truncateText(tagValue, 20);
+                    
+                    // Format: TAG_NAME: Short Value
+                    option.textContent = `${tagName}: ${truncatedValue}`;
+                    
+                    // Add full value as title for tooltip
+                    option.title = `${tagName}\nFull value: ${tagValue}`;
+                    
                     tagSelector.appendChild(option);
                 });
             }
@@ -3249,6 +3271,27 @@ Mapping,"Full Name",FULL_NAME,Field to tag mapping`;
                     border-left: 4px solid transparent;
                     border-right: 4px solid transparent;
                     border-bottom: 4px solid #f44336;
+                }
+                
+                /* Improved dropdown styling */
+                select option {
+                    padding: 8px 12px !important;
+                    font-family: 'Courier New', monospace !important;
+                    font-size: 13px !important;
+                    line-height: 1.4 !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                }
+                
+                select option:hover {
+                    background-color: #e3f2fd !important;
+                }
+                
+                select option[value=""] {
+                    font-style: italic !important;
+                    color: #999 !important;
+                    font-family: Arial, sans-serif !important;
                 }
             `;
             document.head.appendChild(style);
